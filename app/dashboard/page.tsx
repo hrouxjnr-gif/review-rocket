@@ -200,7 +200,7 @@ export default function DashboardPage() {
 
         <section className="content-grid">
           <div className="card">
-            <h2 className="section-title">Review Request</h2>
+            <h2 className="section-title">Create Review Request</h2>
 
             <input
               type="text"
@@ -208,23 +208,31 @@ export default function DashboardPage() {
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <input
               type="text"
               placeholder="Customer phone"
               value={customerPhone}
               onChange={(e) => setCustomerPhone(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <input
               type="text"
               placeholder="Customer address"
               value={customerAddress}
               onChange={(e) => setCustomerAddress(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <input
               type="datetime-local"
               value={jobDatetime}
               onChange={(e) => setJobDatetime(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <input
               type="number"
               step="0.01"
@@ -232,18 +240,24 @@ export default function DashboardPage() {
               value={repairCost}
               onChange={(e) => setRepairCost(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <input
               type="text"
               placeholder="Business name"
               value={businessName}
               onChange={(e) => setBusinessName(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <input
               type="text"
               placeholder="Google review link"
               value={reviewLink}
               onChange={(e) => setReviewLink(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
             <textarea
               rows={8}
               placeholder="Example: fixed leaking pipe and explained the problem clearly"

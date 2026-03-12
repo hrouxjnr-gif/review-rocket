@@ -15,6 +15,7 @@ export default function HowItWorksPage() {
           <div className="nav-links">
             <Link href="/" className="nav-link">Home</Link>
             <Link href="/dashboard" className="nav-link">Dashboard</Link>
+            <Link href="/calendar" className="nav-link">Calendar</Link>
             <Link href="/pricing" className="nav-link">Pricing</Link>
           </div>
         </header>

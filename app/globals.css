@@ -7,7 +7,7 @@ body {
   padding: 0;
   margin: 0;
   font-family: Arial, Helvetica, sans-serif;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #f8fbff 0%, #f3f7fc 100%);
   color: #0f172a;
   overflow-x: hidden;
 }
@@ -30,12 +30,20 @@ textarea {
 input,
 textarea {
   width: 100%;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1px solid #cbd5e1;
-  background: white;
+  padding: 13px 14px;
+  border-radius: 14px;
+  border: 1px solid #d7e1ec;
+  background: #ffffff;
   color: #0f172a;
   min-width: 0;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:focus,
+textarea:focus {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
 }
 
 textarea {
@@ -48,7 +56,6 @@ button {
 
 .page-shell {
   min-height: 100vh;
-  background: #f8fafc;
   padding: 24px 16px 48px;
 }
 
@@ -65,6 +72,12 @@ button {
   gap: 16px;
   flex-wrap: wrap;
   margin-bottom: 28px;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  border-radius: 22px;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
 }
 
 .brand-block h1,
@@ -82,13 +95,21 @@ button {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
   flex-wrap: wrap;
 }
 
 .nav-link {
   color: #2563eb;
   font-weight: 700;
+  padding: 10px 12px;
+  border-radius: 10px;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.nav-link:hover {
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
 }
 
 .hero-grid,
@@ -108,11 +129,13 @@ button {
 }
 
 .card {
-  background: white;
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 24px;
   padding: 24px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+  box-shadow:
+    0 20px 40px rgba(15, 23, 42, 0.06),
+    0 4px 12px rgba(15, 23, 42, 0.03);
   min-width: 0;
 }
 
@@ -121,24 +144,30 @@ button {
   color: #2563eb;
   font-weight: 700;
   margin-bottom: 12px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+  padding: 8px 12px;
+  border-radius: 999px;
 }
 
 .big-title {
   margin: 0 0 18px;
-  font-size: clamp(32px, 6vw, 54px);
-  line-height: 1.05;
+  font-size: clamp(32px, 6vw, 58px);
+  line-height: 1.02;
   color: #0f172a;
+  letter-spacing: -0.03em;
 }
 
 .section-title {
   margin: 0 0 12px;
   font-size: 28px;
   color: #0f172a;
+  letter-spacing: -0.02em;
 }
 
 .muted-text {
   color: #475569;
-  line-height: 1.7;
+  line-height: 1.75;
 }
 
 .button-row {
@@ -154,54 +183,62 @@ button {
 
 .btn,
 .btn-outline,
-.btn-linkbox,
 .btn-success,
 .btn-purple {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 46px;
+  min-height: 48px;
   padding: 12px 18px;
-  border-radius: 12px;
+  border-radius: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: 0.2s ease;
+  transition:
+    transform 0.15s ease,
+    box-shadow 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
   text-align: center;
 }
 
+.btn:hover,
+.btn-outline:hover,
+.btn-success:hover,
+.btn-purple:hover {
+  transform: translateY(-1px);
+}
+
 .btn {
-  background: #2563eb;
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
   color: white;
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.22);
 }
 
-.btn:hover {
-  background: #1d4ed8;
-}
-
-.btn-outline,
-.btn-linkbox {
+.btn-outline {
   background: white;
   color: #0f172a;
   border: 1px solid #cbd5e1;
 }
 
 .btn-success {
-  background: #16a34a;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   color: white;
   border: 1px solid #16a34a;
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.18);
 }
 
 .btn-purple {
-  background: #7c3aed;
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
   color: white;
   border: 1px solid #7c3aed;
+  box-shadow: 0 10px 24px rgba(124, 58, 237, 0.18);
 }
 
 .info-box {
   margin-top: 22px;
   padding: 18px;
-  border-radius: 16px;
-  background: #eff6ff;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #eff6ff 0%, #eef4ff 100%);
   border: 1px solid #bfdbfe;
 }
 
@@ -214,24 +251,24 @@ button {
 .info-box p {
   margin: 0;
   color: #111827;
-  line-height: 1.7;
+  line-height: 1.75;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
 .usage-box {
-  border-radius: 16px;
-  padding: 16px;
+  border-radius: 18px;
+  padding: 16px 18px;
   margin-bottom: 22px;
 }
 
 .usage-box.good {
-  background: #eff6ff;
+  background: linear-gradient(180deg, #eff6ff 0%, #eef4ff 100%);
   border: 1px solid #bfdbfe;
 }
 
 .usage-box.bad {
-  background: #fef2f2;
+  background: linear-gradient(180deg, #fff1f2 0%, #fef2f2 100%);
   border: 1px solid #fecaca;
 }
 
@@ -251,15 +288,15 @@ button {
 
 .list-card {
   border: 1px solid #e2e8f0;
-  border-radius: 16px;
+  border-radius: 18px;
   padding: 16px;
-  background: #f8fafc;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
   min-width: 0;
 }
 
 .list-card p {
   margin: 0;
-  line-height: 1.6;
+  line-height: 1.65;
   word-break: break-word;
 }
 
@@ -269,23 +306,27 @@ button {
 
 .price-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 24px;
   align-items: stretch;
 }
 
 .price-card {
-  background: white;
-  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 24px;
   padding: 28px;
   border: 1px solid #e2e8f0;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  box-shadow:
+    0 20px 40px rgba(15, 23, 42, 0.06),
+    0 4px 12px rgba(15, 23, 42, 0.03);
   position: relative;
 }
 
 .price-card.featured {
   border: 2px solid #2563eb;
-  box-shadow: 0 12px 30px rgba(37, 99, 235, 0.14);
+  box-shadow:
+    0 20px 40px rgba(37, 99, 235, 0.14),
+    0 4px 12px rgba(37, 99, 235, 0.06);
 }
 
 .price-pill {
@@ -317,11 +358,17 @@ button {
   gap: 18px;
 }
 
+.hero-panel {
+  background:
+    radial-gradient(circle at top right, rgba(96, 165, 250, 0.16), transparent 32%),
+    white;
+}
+
 @media (max-width: 900px) {
   .hero-grid,
   .content-grid,
   .price-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 
   .card,
@@ -332,6 +379,10 @@ button {
   .page-shell {
     padding: 18px 12px 36px;
   }
+
+  .topbar {
+    padding: 16px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -341,11 +392,12 @@ button {
 
   .nav-links {
     width: 100%;
-    gap: 10px;
+    gap: 8px;
   }
 
   .nav-link {
     font-size: 14px;
+    padding: 8px 10px;
   }
 
   .section-title {
@@ -364,7 +416,6 @@ button {
 
   .btn,
   .btn-outline,
-  .btn-linkbox,
   .btn-success,
   .btn-purple {
     width: 100%;
@@ -373,7 +424,7 @@ button {
   .price-card,
   .card,
   .list-card {
-    border-radius: 16px;
+    border-radius: 18px;
   }
 
   input,

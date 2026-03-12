@@ -10,6 +10,9 @@ export default function HomePage() {
         <header className="topbar">
           <div className="brand-block">
             <h1>Roux Review Rocket</h1>
+            <p className="brand-subtitle">
+              Smart review requests and job records for service businesses.
+            </p>
           </div>
 
           <div className="nav-links">
@@ -25,14 +28,14 @@ export default function HomePage() {
 
         <section className="hero-grid">
           <div>
-            <span className="badge">Built for service businesses</span>
+            <span className="badge">Built for plumbers, electricians, HVAC and more</span>
             <h2 className="big-title">
-              Turn job notes into customer review requests.
+              Turn every finished job into a professional review request.
             </h2>
             <p className="muted-text">
-              Made for plumbers, electricians, HVAC teams, roofers, cleaners,
-              landscapers, and pest control businesses who want more reviews,
-              better records, and a faster workflow.
+              Roux Review Rocket helps service businesses create customer-ready
+              review requests, auto-save job records, track old work, and keep
+              everything organised in one place.
             </p>
 
             <div className="button-row">
@@ -42,26 +45,28 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="card">
-            <h3 className="section-title">Example workflow</h3>
+          <div className="card hero-panel">
+            <h3 className="section-title">How it feels to use</h3>
 
             <div className="list-card">
               <p><strong>Job Notes</strong></p>
               <p className="list-gap">
-                Fixed leaking pipe and explained the problem clearly.
+                Fixed leaking pipe, explained the issue clearly, and customer was happy.
               </p>
             </div>
 
             <div className="info-box">
-              <h3>Generated review request</h3>
+              <h3>Generated message</h3>
               <p>
                 Hi John,
 
                 {"\n\n"}Thanks for choosing Precision Plumbing.
 
-                {"\n\n"}Fixed leaking pipe and explained the problem clearly.
+                {"\n\n"}Fixed leaking pipe and explained the issue clearly.
 
                 {"\n\n"}If you have a moment, we would really appreciate a quick review.
+
+                {"\n\n"}Thank you again for your support!
               </p>
             </div>
           </div>
