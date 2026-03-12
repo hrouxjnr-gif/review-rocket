@@ -84,7 +84,14 @@ export default function CalendarPage() {
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 className="section-title">Find Jobs</h2>
 
-          <div className="content-grid" style={{ gridTemplateColumns: "0.8fr 1.2fr" }}>
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr",
+              gap: 12,
+              marginTop: 12,
+            }}
+          >
             <input
               type="date"
               value={selectedDate}

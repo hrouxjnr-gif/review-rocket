@@ -29,7 +29,10 @@ export default function PricingPage() {
           </p>
         </section>
 
-        <section className="price-grid">
+        <section
+          className="price-grid"
+          style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 900, margin: "0 auto" }}
+        >
           <div className="price-card">
             <h3 className="section-title">Free</h3>
             <p className="price-value">$0</p>
@@ -41,6 +44,7 @@ export default function PricingPage() {
               <li>Copy message</li>
               <li>WhatsApp and SMS buttons</li>
               <li>Saved history</li>
+              <li>Calendar page</li>
             </ul>
 
             <Link href="/dashboard" className="btn-outline" style={{ marginTop: 18 }}>
@@ -60,26 +64,11 @@ export default function PricingPage() {
               <li>Business settings</li>
               <li>Copy message</li>
               <li>WhatsApp and SMS buttons</li>
+              <li>Calendar page</li>
               <li>Priority updates</li>
             </ul>
 
             <button className="btn" style={{ marginTop: 18 }}>Upgrade to Pro</button>
-          </div>
-
-          <div className="price-card">
-            <h3 className="section-title">Agency</h3>
-            <p className="price-value">$79</p>
-            <p className="muted-text">per month</p>
-
-            <ul className="price-list">
-              <li>Everything in Pro</li>
-              <li>Multi-client use</li>
-              <li>Higher internal usage</li>
-              <li>Team-friendly workflow</li>
-              <li>Future agency tools</li>
-            </ul>
-
-            <button className="btn-outline" style={{ marginTop: 18 }}>Upgrade to Agency</button>
           </div>
         </section>
       </div>
