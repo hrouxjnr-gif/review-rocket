@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import AppHeader from "@/components/AppHeader";
 import { useEffect, useState } from "react";
 
 type JobItem = {
@@ -55,22 +54,7 @@ export default function CustomersPage() {
   return (
     <main className="page-shell">
       <div className="page-container">
-        <header className="topbar">
-          <div className="brand-block">
-            <h1>Customers</h1>
-            <p className="brand-subtitle">
-              Search old clients, view repeat jobs, and track customer history.
-            </p>
-          </div>
-
-          <div className="nav-links">
-            <Link href="/" className="nav-link">Home</Link>
-            <Link href="/dashboard" className="nav-link">Dashboard</Link>
-            <Link href="/calendar" className="nav-link">Calendar</Link>
-            <Link href="/settings" className="nav-link">Settings</Link>
-            <UserButton />
-          </div>
-        </header>
+        <AppHeader />
 
         <div className="card" style={{ marginBottom: 24 }}>
           <h2 className="section-title">Find Customers</h2>
@@ -112,7 +96,9 @@ export default function CustomersPage() {
             <div className="grid-list">
               {customers.map((customer, index) => (
                 <div key={`${customer.customer_name}-${index}`} className="list-card">
-                  <p><strong>{customer.customer_name}</strong></p>
+                  <p>
+                    <strong>{customer.customer_name}</strong>
+                  </p>
 
                   {customer.customer_phone && (
                     <p className="list-gap">
@@ -150,8 +136,15 @@ export default function CustomersPage() {
                           background: "#ffffff",
                         }}
                       >
-                        <p><strong>Job time:</strong> {new Date(job.job_datetime).toLocaleString()}</p>
-                        <p className="list-gap"><strong>Notes:</strong> {job.job_notes}</p>
+                        <p>
+                          <strong>Job time:</strong>{" "}
+                          {new Date(job.job_datetime).toLocaleString()}
+                        </p>
+
+                        <p className="list-gap">
+                          <strong>Notes:</strong> {job.job_notes}
+                        </p>
+
                         <p className="list-gap">
                           <strong>Cost:</strong>{" "}
                           {job.repair_cost !== null ? `R ${job.repair_cost}` : "Not added"}

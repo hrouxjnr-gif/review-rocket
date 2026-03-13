@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata = {
   title: "Roux Review Rocket",
   description: "Turn job notes into customer review requests.",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({

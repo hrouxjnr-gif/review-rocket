@@ -1,37 +1,36 @@
+import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
 
 export default function PricingPage() {
   return (
     <main className="page-shell">
       <div className="page-container">
-        <header className="topbar">
-          <div className="brand-block">
-            <h1>Pricing</h1>
-            <p className="brand-subtitle">
-              Simple plans for service businesses and growing teams.
-            </p>
-          </div>
-
-          <div className="nav-links">
-            <Link href="/" className="nav-link">Home</Link>
-            <Link href="/dashboard" className="nav-link">Dashboard</Link>
-            <Link href="/how-it-works" className="nav-link">How It Works</Link>
-          </div>
-        </header>
+        <AppHeader showUserButton={false} />
 
         <section style={{ textAlign: "center", marginBottom: 34 }}>
           <span className="badge">Simple pricing for service businesses</span>
-          <h2 className="big-title" style={{ maxWidth: 780, marginInline: "auto" }}>
+          <h2
+            className="big-title"
+            style={{ maxWidth: 780, marginInline: "auto" }}
+          >
             Choose the plan that fits your team.
           </h2>
-          <p className="muted-text" style={{ maxWidth: 700, margin: "18px auto 0" }}>
-            Start free, generate review request messages faster, and upgrade when your business needs more volume.
+          <p
+            className="muted-text"
+            style={{ maxWidth: 700, margin: "18px auto 0" }}
+          >
+            Start free, generate review request messages faster, and upgrade when
+            your business needs more volume.
           </p>
         </section>
 
         <section
           className="price-grid"
-          style={{ gridTemplateColumns: "repeat(2, 1fr)", maxWidth: 900, margin: "0 auto" }}
+          style={{
+            gridTemplateColumns: "repeat(2, 1fr)",
+            maxWidth: 900,
+            margin: "0 auto",
+          }}
         >
           <div className="price-card">
             <h3 className="section-title">Free</h3>
@@ -68,7 +67,9 @@ export default function PricingPage() {
               <li>Priority updates</li>
             </ul>
 
-            <button className="btn" style={{ marginTop: 18 }}>Upgrade to Pro</button>
+            <button className="btn" style={{ marginTop: 18 }}>
+              Upgrade to Pro
+            </button>
           </div>
         </section>
       </div>

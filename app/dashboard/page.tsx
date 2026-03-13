@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import AppHeader from "@/components/AppHeader";
 import { useEffect, useState } from "react";
 
 type ReviewItem = {
@@ -164,29 +163,16 @@ export default function DashboardPage() {
     }
   };
 
-  const whatsappUrl = review ? `https://wa.me/?text=${encodeURIComponent(review)}` : "#";
+  const whatsappUrl = review
+    ? `https://wa.me/?text=${encodeURIComponent(review)}`
+    : "#";
+
   const smsUrl = review ? `sms:?body=${encodeURIComponent(review)}` : "#";
 
   return (
     <main className="page-shell">
       <div className="page-container">
-        <header className="topbar">
-          <div className="brand-block">
-            <h1>Dashboard</h1>
-            <p className="brand-subtitle">
-              Generate a review request and auto-save the job in the background.
-            </p>
-          </div>
-
-          <div className="nav-links">
-            <Link href="/" className="nav-link">Home</Link>
-            <Link href="/calendar" className="nav-link">Calendar</Link>
-            <Link href="/customers" className="nav-link">Customers</Link>
-            <Link href="/settings" className="nav-link">Settings</Link>
-            <Link href="/pricing" className="nav-link">Pricing</Link>
-            <UserButton />
-          </div>
-        </header>
+        <AppHeader />
 
         {usage && (
           <div className={`usage-box ${usage.remaining > 0 ? "good" : "bad"}`}>
@@ -309,7 +295,10 @@ export default function DashboardPage() {
                 target="_blank"
                 rel="noreferrer"
                 className="btn-success"
-                style={{ pointerEvents: review ? "auto" : "none", opacity: review ? 1 : 0.65 }}
+                style={{
+                  pointerEvents: review ? "auto" : "none",
+                  opacity: review ? 1 : 0.65,
+                }}
               >
                 Send WhatsApp
               </a>
@@ -317,7 +306,10 @@ export default function DashboardPage() {
               <a
                 href={smsUrl}
                 className="btn-purple"
-                style={{ pointerEvents: review ? "auto" : "none", opacity: review ? 1 : 0.65 }}
+                style={{
+                  pointerEvents: review ? "auto" : "none",
+                  opacity: review ? 1 : 0.65,
+                }}
               >
                 Send SMS
               </a>
@@ -340,15 +332,25 @@ export default function DashboardPage() {
               <div className="grid-list">
                 {history.map((item) => (
                   <div key={item.id} className="list-card">
-                    <p><strong>Notes</strong></p>
+                    <p>
+                      <strong>Notes</strong>
+                    </p>
                     <p className="list-gap">{item.input_text}</p>
 
-                    <p className="list-gap"><strong>Generated Message</strong></p>
-                    <p className="list-gap" style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}>
+                    <p className="list-gap">
+                      <strong>Generated Message</strong>
+                    </p>
+                    <p
+                      className="list-gap"
+                      style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}
+                    >
                       {item.output_text}
                     </p>
 
-                    <p className="list-gap" style={{ fontSize: 12, color: "#64748b" }}>
+                    <p
+                      className="list-gap"
+                      style={{ fontSize: 12, color: "#64748b" }}
+                    >
                       Created: {new Date(item.created_at).toLocaleString()}
                     </p>
                   </div>

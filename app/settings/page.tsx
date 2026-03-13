@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { UserButton } from "@clerk/nextjs";
+import AppHeader from "@/components/AppHeader";
 import { useEffect, useState } from "react";
 
 export default function SettingsPage() {
@@ -14,6 +13,7 @@ export default function SettingsPage() {
     try {
       const res = await fetch("/api/settings");
       const data = await res.json();
+
       if (data.settings) {
         setBusinessName(data.settings.business_name || "");
         setReviewLink(data.settings.review_link || "");
@@ -35,11 +35,19 @@ export default function SettingsPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ businessName, reviewLink }),
+        body: JSON.stringify({
+          businessName,
+          reviewLink,
+        }),
       });
 
       const data = await res.json();
-      setMessage(data.success ? "Settings saved successfully." : data.error || "Something went wrong.");
+
+      if (data.success) {
+        setMessage("Settings saved successfully.");
+      } else {
+        setMessage(data.error || "Something went wrong.");
+      }
     } catch {
       setMessage("Something went wrong.");
     }
@@ -50,21 +58,7 @@ export default function SettingsPage() {
   return (
     <main className="page-shell">
       <div className="page-container">
-        <header className="topbar">
-          <div className="brand-block">
-            <h1>Settings</h1>
-            <p className="brand-subtitle">
-              Save your business name and Google review link once.
-            </p>
-          </div>
-
-          <div className="nav-links">
-            <Link href="/" className="nav-link">Home</Link>
-            <Link href="/dashboard" className="nav-link">Dashboard</Link>
-            <Link href="/calendar" className="nav-link">Calendar</Link>
-            <UserButton />
-          </div>
-        </header>
+        <AppHeader />
 
         <div className="card" style={{ maxWidth: 760 }}>
           <h2 className="section-title">Business Details</h2>
