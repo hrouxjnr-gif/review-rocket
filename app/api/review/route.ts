@@ -4,7 +4,8 @@ import { supabase } from "@/lib/supabase";
 
 const FREE_PLAN_LIMIT = 5;
 
-function buildReviewRequestMessage(
+function buildMessageByTemplate(
+  template: string,
   notes: string,
   customerName: string,
   businessName: string,
@@ -14,9 +15,54 @@ function buildReviewRequestMessage(
   const formattedNotes =
     cleanNotes.charAt(0).toUpperCase() + cleanNotes.slice(1);
 
-  return `Hi ${customerName || "there"},
+  const customer = customerName || "there";
+  const business = businessName || "our business";
 
-Thanks for choosing ${businessName || "our business"}.
+  if (template === "short-sms") {
+    return `Hi ${customer}, thanks for choosing ${business}. ${formattedNotes}. If you have a moment, please leave us a quick review here: ${reviewLink || "[review link]"}`;
+  }
+
+  if (template === "professional") {
+    return `Hello ${customer},
+
+Thank you for choosing ${business}.
+
+${formattedNotes}.
+
+If you were satisfied with the service provided, we would sincerely appreciate a review.
+
+${
+  reviewLink
+    ? `Please leave your review here:
+${reviewLink}
+
+`
+    : ""
+}Thank you for your support.`;
+  }
+
+  if (template === "follow-up") {
+    return `Hi ${customer},
+
+Just following up from ${business}.
+
+We recently completed your job and wanted to thank you again for your support.
+
+If you have a moment, we would really appreciate a review.
+
+${
+  reviewLink
+    ? `Leave your review here:
+${reviewLink}
+
+`
+    : ""
+}Thank you again.`;
+  }
+
+  return `Hi ${customer},
+
+Thanks for choosing ${business}.
 
 ${formattedNotes}.
 
@@ -68,12 +114,14 @@ export async function POST(req: Request) {
   const customerName = body.customerName?.trim() || "";
   const businessName = body.businessName?.trim() || "";
   const reviewLink = body.reviewLink?.trim() || "";
+  const template = body.template?.trim() || "friendly";
 
   if (!inputText) {
     return NextResponse.json({ error: "No text provided" }, { status: 400 });
   }
 
-  const outputText = buildReviewRequestMessage(
+  const outputText = buildMessageByTemplate(
+    template,
     inputText,
     customerName,
     businessName,

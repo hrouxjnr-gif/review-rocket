@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [repairCost, setRepairCost] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [reviewLink, setReviewLink] = useState("");
+  const [template, setTemplate] = useState("friendly");
   const [text, setText] = useState("");
   const [review, setReview] = useState("");
   const [loading, setLoading] = useState(false);
@@ -107,6 +108,7 @@ export default function DashboardPage() {
           customerName,
           businessName,
           reviewLink,
+          template,
         }),
       });
 
@@ -179,6 +181,7 @@ export default function DashboardPage() {
           <div className="nav-links">
             <Link href="/" className="nav-link">Home</Link>
             <Link href="/calendar" className="nav-link">Calendar</Link>
+            <Link href="/customers" className="nav-link">Customers</Link>
             <Link href="/settings" className="nav-link">Settings</Link>
             <Link href="/pricing" className="nav-link">Pricing</Link>
             <UserButton />
@@ -256,6 +259,25 @@ export default function DashboardPage() {
               value={reviewLink}
               onChange={(e) => setReviewLink(e.target.value)}
             />
+            <div style={{ height: 12 }} />
+
+            <select
+              value={template}
+              onChange={(e) => setTemplate(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "13px 14px",
+                borderRadius: 14,
+                border: "1px solid #d7e1ec",
+                background: "#ffffff",
+                color: "#0f172a",
+              }}
+            >
+              <option value="friendly">Friendly</option>
+              <option value="professional">Professional</option>
+              <option value="short-sms">Short SMS</option>
+              <option value="follow-up">Follow-up Reminder</option>
+            </select>
             <div style={{ height: 12 }} />
 
             <textarea
