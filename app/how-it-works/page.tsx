@@ -4,7 +4,7 @@ export default function HowItWorksPage() {
   return (
     <main className="page-shell">
       <div className="page-container" style={{ maxWidth: 900 }}>
-        <AppHeader showUserButton={false} />
+        <AppHeader showUserButton={true} />
 
         <div className="simple-stack">
           <div className="card">

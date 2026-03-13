@@ -23,13 +23,13 @@ export default function AppHeader({ showUserButton = true }: AppHeaderProps) {
       </div>
 
       <nav className="nav-links">
+        <Link href="/" className="nav-link">Home</Link>
         <Link href="/dashboard" className="nav-link">Dashboard</Link>
         <Link href="/calendar" className="nav-link">Calendar</Link>
         <Link href="/customers" className="nav-link">Customers</Link>
         <Link href="/pricing" className="nav-link">Pricing</Link>
         <Link href="/settings" className="nav-link">Settings</Link>
         <Link href="/how-it-works" className="nav-link">How It Works</Link>
-
         {showUserButton && <UserButton />}
       </nav>
     </header>

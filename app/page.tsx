@@ -5,7 +5,7 @@ export default function HomePage() {
   return (
     <main className="page-shell">
       <div className="page-container">
-        <AppHeader showUserButton={false} />
+        <AppHeader showUserButton={true} />
 
         <section className="hero-grid">
           <div>

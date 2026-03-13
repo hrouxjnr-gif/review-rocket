@@ -5,7 +5,7 @@ export default function PricingPage() {
   return (
     <main className="page-shell">
       <div className="page-container">
-        <AppHeader showUserButton={false} />
+        <AppHeader showUserButton={true} />
 
         <section style={{ textAlign: "center", marginBottom: 34 }}>
           <span className="badge">Simple pricing for service businesses</span>
