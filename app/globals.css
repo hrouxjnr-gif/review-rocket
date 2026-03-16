@@ -478,4 +478,7 @@ button {
     font-weight: 600;
     color: #4f46e5;
   }
+  .topbar {
+    position: relative;
+  }
 }
