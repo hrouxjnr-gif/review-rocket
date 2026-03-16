@@ -17,6 +17,18 @@ type UsageData = {
   remaining: number;
 };
 
+type StatsData = {
+  totalJobs: number;
+  jobsToday: number;
+  totalRevenue: number;
+  latestTodayJobs: Array<{
+    id: number;
+    customer_name: string;
+    job_datetime: string;
+    repair_cost: number | null;
+  }>;
+};
+
 export default function DashboardPage() {
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -33,6 +45,7 @@ export default function DashboardPage() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [copyMessage, setCopyMessage] = useState("Copy Message");
   const [usage, setUsage] = useState<UsageData | null>(null);
+  const [stats, setStats] = useState<StatsData | null>(null);
 
   const loadHistory = async () => {
     setHistoryLoading(true);
@@ -65,10 +78,19 @@ export default function DashboardPage() {
     } catch {}
   };
 
+  const loadStats = async () => {
+    try {
+      const res = await fetch("/api/stats");
+      const data = await res.json();
+      if (!data.error) setStats(data);
+    } catch {}
+  };
+
   useEffect(() => {
     loadHistory();
     loadSettings();
     loadUsage();
+    loadStats();
   }, []);
 
   const handleGenerate = async () => {
@@ -141,6 +163,7 @@ export default function DashboardPage() {
 
         loadHistory();
         loadUsage();
+        loadStats();
       } else {
         setReview(data.error || "Something went wrong");
       }
@@ -173,6 +196,38 @@ export default function DashboardPage() {
     <main className="page-shell">
       <div className="page-container">
         <AppHeader />
+
+        {stats && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+              gap: 16,
+              marginBottom: 24,
+            }}
+          >
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Total Jobs</h3>
+              <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
+                {stats.totalJobs}
+              </p>
+            </div>
+
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Jobs Today</h3>
+              <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
+                {stats.jobsToday}
+              </p>
+            </div>
+
+            <div className="card">
+              <h3 style={{ marginTop: 0 }}>Total Revenue</h3>
+              <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
+                R {stats.totalRevenue.toFixed(2)}
+              </p>
+            </div>
+          </div>
+        )}
 
         {usage && (
           <div className={`usage-box ${usage.remaining > 0 ? "good" : "bad"}`}>
@@ -322,7 +377,27 @@ export default function DashboardPage() {
           </div>
 
           <div className="card">
-            <h2 className="section-title">Recent Messages</h2>
+            <h2 className="section-title">Today’s Jobs</h2>
+
+            {stats && stats.latestTodayJobs.length > 0 ? (
+              <div className="grid-list">
+                {stats.latestTodayJobs.map((job) => (
+                  <div key={job.id} className="list-card">
+                    <p><strong>{job.customer_name}</strong></p>
+                    <p className="list-gap">
+                      {new Date(job.job_datetime).toLocaleString()}
+                    </p>
+                    <p className="list-gap">
+                      Cost: {job.repair_cost !== null ? `R ${job.repair_cost}` : "Not added"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted-text">No jobs saved today yet.</p>
+            )}
+
+            <h2 className="section-title" style={{ marginTop: 28 }}>Recent Messages</h2>
 
             {historyLoading ? (
               <p className="muted-text">Loading history...</p>
@@ -330,16 +405,12 @@ export default function DashboardPage() {
               <p className="muted-text">No saved messages yet.</p>
             ) : (
               <div className="grid-list">
-                {history.map((item) => (
+                {history.slice(0, 5).map((item) => (
                   <div key={item.id} className="list-card">
-                    <p>
-                      <strong>Notes</strong>
-                    </p>
+                    <p><strong>Notes</strong></p>
                     <p className="list-gap">{item.input_text}</p>
 
-                    <p className="list-gap">
-                      <strong>Generated Message</strong>
-                    </p>
+                    <p className="list-gap"><strong>Generated Message</strong></p>
                     <p
                       className="list-gap"
                       style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}
