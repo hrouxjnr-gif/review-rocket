@@ -23,12 +23,14 @@ a {
 
 button,
 input,
-textarea {
+textarea,
+select {
   font: inherit;
 }
 
 input,
-textarea {
+textarea,
+select {
   width: 100%;
   padding: 13px 14px;
   border-radius: 14px;
@@ -40,7 +42,8 @@ textarea {
 }
 
 input:focus,
-textarea:focus {
+textarea:focus,
+select:focus {
   outline: none;
   border-color: #60a5fa;
   box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.12);
@@ -66,37 +69,13 @@ button {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: wrap;
   margin-bottom: 28px;
   padding: 18px 20px;
-  background: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.82);
   backdrop-filter: blur(10px);
   border: 1px solid rgba(226, 232, 240, 0.9);
   border-radius: 22px;
   box-shadow: 0 10px 30px rgba(15, 23, 42, 0.05);
-}
-
-.brand-block h1,
-.brand-block h2 {
-  margin: 0;
-  word-break: break-word;
-}
-
-.brand-subtitle {
-  margin-top: 8px;
-  color: #64748b;
-  line-height: 1.5;
-}
-
-.nav-links {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
 }
 
 .nav-link {
@@ -129,7 +108,7 @@ button {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.9);
+  background: rgba(255, 255, 255, 0.92);
   border-radius: 24px;
   padding: 24px;
   border: 1px solid #e2e8f0;
@@ -364,6 +343,96 @@ button {
     white;
 }
 
+/* HEADER */
+.app-header-shell {
+  position: relative;
+}
+
+.app-header-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 24px;
+}
+
+.app-header-logo-link {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.app-logo {
+  width: 180px;
+  height: auto;
+  display: block;
+}
+
+.app-header-right {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 14px;
+  min-width: 0;
+}
+
+.app-header-main-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.menu-toggle-btn {
+  min-height: 42px;
+  white-space: nowrap;
+}
+
+.auth-buttons-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.auth-btn-small {
+  min-height: 40px;
+  padding: 10px 14px;
+}
+
+.user-button-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.app-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 260px;
+  max-width: calc(100vw - 32px);
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+  padding: 12px;
+  z-index: 100;
+}
+
+.app-menu-links {
+  display: grid;
+  gap: 8px;
+}
+
+.app-menu-links .nav-link {
+  display: block;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+/* Tablet */
 @media (max-width: 900px) {
   .hero-grid,
   .content-grid,
@@ -383,16 +452,27 @@ button {
   .topbar {
     padding: 16px;
   }
-}
 
-@media (max-width: 640px) {
-  .topbar {
+  .app-header-row {
+    grid-template-columns: 1fr;
     align-items: flex-start;
   }
 
-  .nav-links {
+  .app-logo {
+    width: 170px;
+  }
+
+  .app-header-right {
     width: 100%;
-    gap: 8px;
+    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+}
+
+/* Phone */
+@media (max-width: 640px) {
+  .topbar {
+    align-items: flex-start;
   }
 
   .nav-link {
@@ -428,57 +508,30 @@ button {
   }
 
   input,
-  textarea {
+  textarea,
+  select {
     font-size: 16px;
   }
-  .nav-link {
-    color: #334155;
-    font-weight: 500;
-    text-decoration: none;
-    transition: 0.2s;
+
+  .app-logo {
+    width: 145px;
   }
-  
-  .nav-link:hover {
-    color: #4f46e5;
+
+  .app-header-right {
+    align-items: flex-start;
+    gap: 10px;
   }
-  .topbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 18px 0;
-    flex-wrap: wrap;
-    gap: 16px;
+
+  .app-header-main-links {
+    gap: 6px;
   }
-  
-  .nav-links {
-    display: flex;
-    gap: 18px;
-    align-items: center;
-    flex-wrap: wrap;
+
+  .auth-buttons-row {
+    justify-content: flex-end;
   }
-  .btn {
-    background: #4f46e5;
-    color: white;
-    padding: 12px 18px;
-    border-radius: 10px;
-    font-weight: 600;
-    border: none;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-  
-  .btn:hover {
-    background: #4338ca;
-  }
-  
-  .btn-outline {
-    border: 1px solid #cbd5f5;
-    padding: 12px 18px;
-    border-radius: 10px;
-    font-weight: 600;
-    color: #4f46e5;
-  }
-  .topbar {
-    position: relative;
+
+  .app-menu-dropdown {
+    right: 0;
+    width: min(260px, calc(100vw - 32px));
   }
 }
