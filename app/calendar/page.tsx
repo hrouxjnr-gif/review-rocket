@@ -11,6 +11,8 @@ type Job = {
   job_notes: string;
   repair_cost: number | null;
   job_datetime: string;
+  created_at: string;
+  generated_message?: string | null;
 };
 
 export default function CalendarPage() {
@@ -72,7 +74,7 @@ export default function CalendarPage() {
         : true;
 
       const matchesSearch = q
-        ? `${job.customer_name} ${job.customer_phone} ${job.customer_address} ${job.job_notes}`
+        ? `${job.customer_name} ${job.customer_phone} ${job.customer_address} ${job.job_notes} ${job.generated_message || ""}`
             .toLowerCase()
             .includes(q)
         : true;
@@ -121,6 +123,14 @@ export default function CalendarPage() {
     setEditingData(null);
   };
 
+  const copyMessage = async (message: string) => {
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   return (
     <main className="page-shell">
       <div className="page-container">
@@ -129,7 +139,7 @@ export default function CalendarPage() {
         <div className="card" style={{ marginBottom: 20 }}>
           <h2 className="section-title">Calendar</h2>
           <p className="muted-text">
-            Filter by date and search old jobs, notes, and customer details.
+            Filter by date and search old jobs, notes, customer details, and saved messages.
           </p>
 
           <div
@@ -147,7 +157,7 @@ export default function CalendarPage() {
 
             <input
               type="text"
-              placeholder="Search by name, phone, address, or notes"
+              placeholder="Search by name, phone, address, notes, or saved message"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
@@ -177,6 +187,14 @@ export default function CalendarPage() {
             {jobs.map((job) => {
               const isEditing = editingId === job.id;
 
+              const whatsappUrl = job.generated_message
+                ? `https://wa.me/?text=${encodeURIComponent(job.generated_message)}`
+                : "#";
+
+              const emailUrl = job.generated_message
+                ? `mailto:?subject=${encodeURIComponent("Review Request")}&body=${encodeURIComponent(job.generated_message)}`
+                : "#";
+
               return (
                 <div key={job.id} className="card">
                   {!isEditing ? (
@@ -198,12 +216,52 @@ export default function CalendarPage() {
                           : "Not added"}
                       </p>
 
-                      <button
-                        className="btn-outline"
-                        onClick={() => startEdit(job)}
-                      >
-                        Edit
-                      </button>
+                      {job.generated_message && (
+                        <>
+                          <p style={{ marginTop: 12 }}>
+                            <strong>Saved Message:</strong>
+                          </p>
+                          <p
+                            className="list-gap"
+                            style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}
+                          >
+                            {job.generated_message}
+                          </p>
+                        </>
+                      )}
+
+                      <div className="button-row">
+                        <button
+                          className="btn-outline"
+                          onClick={() => startEdit(job)}
+                        >
+                          Edit
+                        </button>
+
+                        {job.generated_message && (
+                          <>
+                            <button
+                              className="btn-outline"
+                              onClick={() => copyMessage(job.generated_message || "")}
+                            >
+                              Copy Message
+                            </button>
+
+                            <a
+                              className="btn-success"
+                              href={whatsappUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              WhatsApp
+                            </a>
+
+                            <a className="btn-outline" href={emailUrl}>
+                              Email
+                            </a>
+                          </>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>

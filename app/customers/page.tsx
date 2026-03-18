@@ -11,34 +11,47 @@ type Job = {
   job_notes: string;
   repair_cost: number | null;
   job_datetime: string;
+  created_at: string;
+  generated_message?: string | null;
 };
 
 export default function CustomersPage() {
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [searchInput, setSearchInput] = useState("");
   const [currency, setCurrency] = useState("R");
 
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingData, setEditingData] = useState<any>({});
-  const [searchInput, setSearchInput] = useState("");
-  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [editingData, setEditingData] = useState<Job | null>(null);
 
   const loadJobs = async () => {
     setLoading(true);
-    const res = await fetch("/api/jobs");
-    const data = await res.json();
+    try {
+      const res = await fetch("/api/jobs");
+      const data = await res.json();
 
-    const list = data.jobs || [];
-    setJobs(list);
-    setAllJobs(list);
+      const loadedJobs = data.jobs || [];
+      setAllJobs(loadedJobs);
+      setJobs(loadedJobs);
+    } catch (err) {
+      console.error(err);
+      setAllJobs([]);
+      setJobs([]);
+    }
     setLoading(false);
   };
 
   const loadSettings = async () => {
-    const res = await fetch("/api/settings");
-    const data = await res.json();
-    if (data.settings?.currency) {
-      setCurrency(data.settings.currency);
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+      if (data.settings?.currency) {
+        setCurrency(data.settings.currency);
+      }
+    } catch (err) {
+      console.error(err);
     }
   };
 
@@ -47,16 +60,46 @@ export default function CustomersPage() {
     loadSettings();
   }, []);
 
+  const handleSearch = () => {
+    const q = searchInput.trim().toLowerCase();
+
+    if (!q) {
+      setJobs(allJobs);
+      return;
+    }
+
+    const filtered = allJobs.filter((job) => {
+      return (
+        (job.customer_name || "").toLowerCase().includes(q) ||
+        (job.customer_phone || "").toLowerCase().includes(q) ||
+        (job.customer_address || "").toLowerCase().includes(q) ||
+        (job.job_notes || "").toLowerCase().includes(q) ||
+        (job.generated_message || "").toLowerCase().includes(q)
+      );
+    });
+
+    setJobs(filtered);
+  };
+
+  const handleReset = () => {
+    setSearchInput("");
+    setJobs(allJobs);
+  };
+
   const startEdit = (job: Job) => {
     setEditingId(job.id);
     setEditingData({
       ...job,
       repair_cost:
-        job.repair_cost === null ? "" : Number(job.repair_cost),
+        job.repair_cost === null || job.repair_cost === undefined
+          ? null
+          : Number(job.repair_cost),
     });
   };
 
   const saveEdit = async () => {
+    if (!editingData) return;
+
     await fetch("/api/jobs/update", {
       method: "POST",
       headers: {
@@ -66,24 +109,16 @@ export default function CustomersPage() {
     });
 
     setEditingId(null);
+    setEditingData(null);
     loadJobs();
   };
 
-  const handleSearch = () => {
-    const q = searchInput.toLowerCase();
-
-    const filtered = allJobs.filter((job) =>
-      `${job.customer_name} ${job.customer_phone} ${job.customer_address} ${job.job_notes}`
-        .toLowerCase()
-        .includes(q)
-    );
-
-    setJobs(filtered);
-  };
-
-  const resetSearch = () => {
-    setSearchInput("");
-    setJobs(allJobs);
+  const copyMessage = async (message: string) => {
+    try {
+      await navigator.clipboard.writeText(message);
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   return (
@@ -91,12 +126,11 @@ export default function CustomersPage() {
       <div className="page-container">
         <AppHeader />
 
-        {/* SEARCH + EXPORT */}
         <div className="card" style={{ marginBottom: 20 }}>
-          <h2>Customers</h2>
+          <h2 className="section-title">Customers</h2>
 
           <input
-            placeholder="Search..."
+            placeholder="Search by name, phone, address, notes, or saved message"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
           />
@@ -106,7 +140,7 @@ export default function CustomersPage() {
               Search
             </button>
 
-            <button className="btn-outline" onClick={resetSearch}>
+            <button className="btn-outline" onClick={handleReset}>
               Reset
             </button>
 
@@ -116,7 +150,6 @@ export default function CustomersPage() {
           </div>
         </div>
 
-        {/* JOB LIST */}
         {loading ? (
           <p>Loading...</p>
         ) : jobs.length === 0 ? (
@@ -125,6 +158,14 @@ export default function CustomersPage() {
           <div className="grid-list">
             {jobs.map((job) => {
               const isEditing = editingId === job.id;
+
+              const whatsappUrl = job.generated_message
+                ? `https://wa.me/?text=${encodeURIComponent(job.generated_message)}`
+                : "#";
+
+              const emailUrl = job.generated_message
+                ? `mailto:?subject=${encodeURIComponent("Review Request")}&body=${encodeURIComponent(job.generated_message)}`
+                : "#";
 
               return (
                 <div key={job.id} className="card">
@@ -140,65 +181,129 @@ export default function CustomersPage() {
                           ? `${currency} ${Number(job.repair_cost).toFixed(2)}`
                           : "Not added"}
                       </p>
+                      <p>
+                        <strong>Date:</strong>{" "}
+                        {job.job_datetime
+                          ? new Date(job.job_datetime).toLocaleString()
+                          : "No date"}
+                      </p>
 
-                      <button
-                        className="btn-outline"
-                        onClick={() => startEdit(job)}
-                      >
-                        Edit
-                      </button>
+                      {job.generated_message && (
+                        <>
+                          <p style={{ marginTop: 12 }}>
+                            <strong>Saved Message:</strong>
+                          </p>
+                          <p
+                            className="list-gap"
+                            style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}
+                          >
+                            {job.generated_message}
+                          </p>
+                        </>
+                      )}
+
+                      <div className="button-row">
+                        <button
+                          className="btn-outline"
+                          onClick={() => startEdit(job)}
+                        >
+                          Edit
+                        </button>
+
+                        {job.generated_message && (
+                          <>
+                            <button
+                              className="btn-outline"
+                              onClick={() => copyMessage(job.generated_message || "")}
+                            >
+                              Copy Message
+                            </button>
+
+                            <a
+                              className="btn-success"
+                              href={whatsappUrl}
+                              target="_blank"
+                              rel="noreferrer"
+                            >
+                              WhatsApp
+                            </a>
+
+                            <a className="btn-outline" href={emailUrl}>
+                              Email
+                            </a>
+                          </>
+                        )}
+                      </div>
                     </>
                   ) : (
                     <>
                       <input
-                        value={editingData.customer_name}
+                        value={editingData?.customer_name || ""}
                         onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            customer_name: e.target.value,
-                          })
+                          setEditingData((prev) =>
+                            prev ? { ...prev, customer_name: e.target.value } : prev
+                          )
                         }
+                        placeholder="Customer Name"
                       />
 
-                      <input
-                        value={editingData.customer_phone}
-                        onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            customer_phone: e.target.value,
-                          })
-                        }
-                      />
+                      <div style={{ height: 12 }} />
 
                       <input
-                        value={editingData.customer_address}
+                        value={editingData?.customer_phone || ""}
                         onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            customer_address: e.target.value,
-                          })
+                          setEditingData((prev) =>
+                            prev ? { ...prev, customer_phone: e.target.value } : prev
+                          )
                         }
+                        placeholder="Phone"
                       />
+
+                      <div style={{ height: 12 }} />
+
+                      <input
+                        value={editingData?.customer_address || ""}
+                        onChange={(e) =>
+                          setEditingData((prev) =>
+                            prev ? { ...prev, customer_address: e.target.value } : prev
+                          )
+                        }
+                        placeholder="Address"
+                      />
+
+                      <div style={{ height: 12 }} />
 
                       <textarea
-                        value={editingData.job_notes}
+                        rows={5}
+                        value={editingData?.job_notes || ""}
                         onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            job_notes: e.target.value,
-                          })
+                          setEditingData((prev) =>
+                            prev ? { ...prev, job_notes: e.target.value } : prev
+                          )
                         }
+                        placeholder="Notes"
                       />
+
+                      <div style={{ height: 12 }} />
 
                       <input
                         type="number"
-                        value={editingData.repair_cost}
+                        step="0.01"
+                        value={editingData?.repair_cost ?? ""}
                         onChange={(e) =>
-                          setEditingData({
-                            ...editingData,
-                            repair_cost: e.target.value,
-                          })
+                          setEditingData((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  repair_cost:
+                                    e.target.value === ""
+                                      ? null
+                                      : Number(e.target.value),
+                                }
+                              : prev
+                          )
                         }
+                        placeholder="Cost"
                       />
 
                       <div className="button-row">
@@ -208,7 +313,10 @@ export default function CustomersPage() {
 
                         <button
                           className="btn-outline"
-                          onClick={() => setEditingId(null)}
+                          onClick={() => {
+                            setEditingId(null);
+                            setEditingData(null);
+                          }}
                         >
                           Cancel
                         </button>
