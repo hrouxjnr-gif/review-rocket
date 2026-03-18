@@ -1,3 +1,4 @@
+import Link from "next/link";
 import AppHeader from "@/components/AppHeader";
 
 export default function HowItWorksPage() {
@@ -186,14 +187,14 @@ export default function HowItWorksPage() {
             </div>
           </div>
 
-          <div className="card">
+          <Link href="/feedback" className="card support-card-link">
             <span className="badge">Support</span>
             <h2 className="section-title">Need help?</h2>
             <p className="muted-text">
               If you need help setting up your review link, choosing a plan, or
-              adding staff members, use the Contact page and email support.
+              adding staff members, tap here to open the Contact page.
             </p>
-          </div>
+          </Link>
         </div>
       </div>
     </main>
