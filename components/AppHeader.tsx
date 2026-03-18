@@ -109,6 +109,11 @@ export default function AppHeader({
                 <Link href="/feedback" className="nav-link" onClick={closeMenu}>
                   Contact
                 </Link>
+                
+                <Link href="/team" className="nav-link" onClick={closeMenu}>
+                 Team
+                </Link>
+                
               </div>
             </div>
           )}

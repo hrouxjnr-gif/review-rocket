@@ -3,61 +3,122 @@
 import AppHeader from "@/components/AppHeader";
 import { useEffect, useState } from "react";
 
-type JobItem = {
+type Job = {
   id: number;
   customer_name: string;
-  customer_phone: string | null;
-  customer_address: string | null;
-  job_datetime: string;
+  customer_phone: string;
+  customer_address: string;
   job_notes: string;
   repair_cost: number | null;
-  generated_message: string | null;
+  job_datetime: string;
 };
 
 export default function CalendarPage() {
-  const [selectedDate, setSelectedDate] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [jobs, setJobs] = useState<JobItem[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [allJobs, setAllJobs] = useState<Job[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const loadJobs = async (date: string, search: string) => {
+  const [selectedDate, setSelectedDate] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [currency, setCurrency] = useState("R");
+
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingData, setEditingData] = useState<Job | null>(null);
+
+  const loadJobs = async () => {
     setLoading(true);
 
     try {
-      const params = new URLSearchParams();
-      if (date) params.set("date", date);
-      if (search.trim()) params.set("search", search.trim());
-
-      const res = await fetch(`/api/jobs?${params.toString()}`);
+      const res = await fetch("/api/jobs");
       const data = await res.json();
-      setJobs(data.jobs || []);
-    } catch {
+
+      const list = data.jobs || [];
+      setJobs(list);
+      setAllJobs(list);
+    } catch (err) {
+      console.error(err);
       setJobs([]);
+      setAllJobs([]);
     }
 
     setLoading(false);
   };
 
+  const loadSettings = async () => {
+    try {
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+
+      if (data.settings?.currency) {
+        setCurrency(data.settings.currency);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
-    setSelectedDate(today);
-    loadJobs(today, "");
+    loadJobs();
+    loadSettings();
+    setSelectedDate(new Date().toISOString().split("T")[0]);
   }, []);
 
-  const handleDateChange = (date: string) => {
-    setSelectedDate(date);
-    loadJobs(date, searchTerm);
-  };
-
   const handleSearch = () => {
-    loadJobs(selectedDate, searchTerm);
+    const q = searchInput.trim().toLowerCase();
+
+    const filtered = allJobs.filter((job) => {
+      const matchesDate = selectedDate
+        ? (job.job_datetime || "").slice(0, 10) === selectedDate
+        : true;
+
+      const matchesSearch = q
+        ? `${job.customer_name} ${job.customer_phone} ${job.customer_address} ${job.job_notes}`
+            .toLowerCase()
+            .includes(q)
+        : true;
+
+      return matchesDate && matchesSearch;
+    });
+
+    setJobs(filtered);
   };
 
-  const handleClear = () => {
-    const today = new Date().toISOString().split("T")[0];
-    setSelectedDate(today);
-    setSearchTerm("");
-    loadJobs(today, "");
+  const resetSearch = () => {
+    setSelectedDate(new Date().toISOString().split("T")[0]);
+    setSearchInput("");
+    setJobs(allJobs);
+  };
+
+  const startEdit = (job: Job) => {
+    setEditingId(job.id);
+    setEditingData({
+      ...job,
+      repair_cost:
+        job.repair_cost === null || job.repair_cost === undefined
+          ? null
+          : Number(job.repair_cost),
+    });
+  };
+
+  const saveEdit = async () => {
+    if (!editingData) return;
+
+    await fetch("/api/jobs/update", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(editingData),
+    });
+
+    setEditingId(null);
+    setEditingData(null);
+    loadJobs();
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditingData(null);
   };
 
   return (
@@ -65,94 +126,180 @@ export default function CalendarPage() {
       <div className="page-container">
         <AppHeader />
 
-        <div className="card" style={{ marginBottom: 24 }}>
-          <h2 className="section-title">Find Jobs</h2>
+        <div className="card" style={{ marginBottom: 20 }}>
+          <h2 className="section-title">Calendar</h2>
+          <p className="muted-text">
+            Filter by date and search old jobs, notes, and customer details.
+          </p>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr",
+              gridTemplateColumns: "1fr 1fr",
               gap: 12,
-              marginTop: 12,
             }}
           >
             <input
               type="date"
               value={selectedDate}
-              onChange={(e) => handleDateChange(e.target.value)}
+              onChange={(e) => setSelectedDate(e.target.value)}
             />
 
             <input
               type="text"
-              placeholder="Search by client, phone, address, or notes"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name, phone, address, or notes"
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
 
           <div className="button-row">
-            <button onClick={handleSearch} className="btn">
+            <button className="btn" onClick={handleSearch}>
               Search
             </button>
-            <button onClick={handleClear} className="btn-outline">
+
+            <button className="btn-outline" onClick={resetSearch}>
               Reset
             </button>
+
+            <a className="btn-outline" href="/api/export/jobs">
+              Export CSV
+            </a>
           </div>
         </div>
 
-        <div className="card">
-          <h2 className="section-title">Results</h2>
+        {loading ? (
+          <p>Loading...</p>
+        ) : jobs.length === 0 ? (
+          <p>No jobs found.</p>
+        ) : (
+          <div className="grid-list">
+            {jobs.map((job) => {
+              const isEditing = editingId === job.id;
 
-          {loading ? (
-            <p className="muted-text">Loading jobs...</p>
-          ) : jobs.length === 0 ? (
-            <p className="muted-text">No jobs found.</p>
-          ) : (
-            <div className="grid-list">
-              {jobs.map((job) => (
-                <div key={job.id} className="list-card">
-                  <p>
-                    <strong>{job.customer_name}</strong>
-                  </p>
-                  <p className="list-gap">
-                    <strong>Time:</strong>{" "}
-                    {new Date(job.job_datetime).toLocaleString()}
-                  </p>
+              return (
+                <div key={job.id} className="card">
+                  {!isEditing ? (
+                    <>
+                      <p>
+                        <strong>Date:</strong>{" "}
+                        {job.job_datetime
+                          ? new Date(job.job_datetime).toLocaleString()
+                          : "No date"}
+                      </p>
+                      <p><strong>Name:</strong> {job.customer_name}</p>
+                      <p><strong>Phone:</strong> {job.customer_phone}</p>
+                      <p><strong>Address:</strong> {job.customer_address}</p>
+                      <p><strong>Notes:</strong> {job.job_notes}</p>
+                      <p>
+                        <strong>Cost:</strong>{" "}
+                        {job.repair_cost !== null && job.repair_cost !== undefined
+                          ? `${currency} ${Number(job.repair_cost).toFixed(2)}`
+                          : "Not added"}
+                      </p>
 
-                  {job.customer_phone && (
-                    <p className="list-gap">
-                      <strong>Phone:</strong> {job.customer_phone}
-                    </p>
-                  )}
+                      <button
+                        className="btn-outline"
+                        onClick={() => startEdit(job)}
+                      >
+                        Edit
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <input
+                        value={editingData?.customer_name || ""}
+                        onChange={(e) =>
+                          setEditingData((prev) =>
+                            prev
+                              ? { ...prev, customer_name: e.target.value }
+                              : prev
+                          )
+                        }
+                        placeholder="Customer Name"
+                      />
 
-                  {job.customer_address && (
-                    <p className="list-gap">
-                      <strong>Address:</strong> {job.customer_address}
-                    </p>
-                  )}
+                      <div style={{ height: 12 }} />
 
-                  <p className="list-gap">
-                    <strong>Cost:</strong>{" "}
-                    {job.repair_cost !== null ? `R ${job.repair_cost}` : "Not added"}
-                  </p>
+                      <input
+                        value={editingData?.customer_phone || ""}
+                        onChange={(e) =>
+                          setEditingData((prev) =>
+                            prev
+                              ? { ...prev, customer_phone: e.target.value }
+                              : prev
+                          )
+                        }
+                        placeholder="Phone"
+                      />
 
-                  <p className="list-gap">
-                    <strong>Notes:</strong> {job.job_notes}
-                  </p>
+                      <div style={{ height: 12 }} />
 
-                  {job.generated_message && (
-                    <p
-                      className="list-gap"
-                      style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}
-                    >
-                      <strong>Message:</strong> {job.generated_message}
-                    </p>
+                      <input
+                        value={editingData?.customer_address || ""}
+                        onChange={(e) =>
+                          setEditingData((prev) =>
+                            prev
+                              ? { ...prev, customer_address: e.target.value }
+                              : prev
+                          )
+                        }
+                        placeholder="Address"
+                      />
+
+                      <div style={{ height: 12 }} />
+
+                      <textarea
+                        rows={5}
+                        value={editingData?.job_notes || ""}
+                        onChange={(e) =>
+                          setEditingData((prev) =>
+                            prev
+                              ? { ...prev, job_notes: e.target.value }
+                              : prev
+                          )
+                        }
+                        placeholder="Notes"
+                      />
+
+                      <div style={{ height: 12 }} />
+
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={editingData?.repair_cost ?? ""}
+                        onChange={(e) =>
+                          setEditingData((prev) =>
+                            prev
+                              ? {
+                                  ...prev,
+                                  repair_cost:
+                                    e.target.value === ""
+                                      ? null
+                                      : Number(e.target.value),
+                                }
+                              : prev
+                          )
+                        }
+                        placeholder="Cost"
+                      />
+
+                      <div className="button-row">
+                        <button className="btn" onClick={saveEdit}>
+                          Save
+                        </button>
+
+                        <button className="btn-outline" onClick={cancelEdit}>
+                          Cancel
+                        </button>
+                      </div>
+                    </>
                   )}
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </main>
   );

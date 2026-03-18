@@ -1,50 +1,32 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getWorkspaceId } from "@/lib/workspace";
 
-export async function GET(req: Request) {
+export async function GET() {
   try {
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({ jobs: [] });
     }
 
-    const url = new URL(req.url);
-    const search = url.searchParams.get("search")?.trim() || "";
-    const date = url.searchParams.get("date")?.trim() || "";
+    const workspaceId = await getWorkspaceId(userId);
 
-    let query = supabase
+    const { data, error } = await supabase
       .from("jobs")
       .select("*")
-      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .order("job_datetime", { ascending: false });
 
-    if (search) {
-      query = query.or(
-        `customer_name.ilike.%${search}%,customer_phone.ilike.%${search}%,customer_address.ilike.%${search}%,job_notes.ilike.%${search}%`
-      );
-    }
-
-    if (date) {
-      const start = new Date(`${date}T00:00:00`);
-      const end = new Date(`${date}T23:59:59`);
-
-      query = query
-        .gte("job_datetime", start.toISOString())
-        .lte("job_datetime", end.toISOString());
-    }
-
-    const { data, error } = await query;
-
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ jobs: [], error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ jobs: data || [] });
-  } catch (error) {
-    console.error("GET /api/jobs error:", error);
-    return NextResponse.json({ error: "Failed to load jobs" }, { status: 500 });
+  } catch (err) {
+    console.error("GET /api/jobs error:", err);
+    return NextResponse.json({ jobs: [], error: "Server error" }, { status: 500 });
   }
 }
 
@@ -56,136 +38,41 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const workspaceId = await getWorkspaceId(userId);
     const body = await req.json();
 
-    const customer_name = body.customer_name?.trim();
-    const customer_phone = body.customer_phone?.trim() || "";
-    const customer_address = body.customer_address?.trim() || "";
-    const job_datetime = body.job_datetime;
-    const job_notes = body.job_notes?.trim();
-    const repair_cost =
-      body.repair_cost === "" || body.repair_cost === null || body.repair_cost === undefined
-        ? null
-        : Number(body.repair_cost);
-    const generated_message = body.generated_message?.trim() || "";
+    const {
+      customer_name,
+      customer_phone,
+      customer_address,
+      job_datetime,
+      job_notes,
+      repair_cost,
+      generated_message,
+    } = body;
 
-    if (!customer_name || !job_datetime || !job_notes) {
-      return NextResponse.json(
-        { error: "Customer name, job date/time, and job notes are required." },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from("jobs")
-      .insert({
-        user_id: userId,
-        customer_name,
-        customer_phone,
-        customer_address,
-        job_datetime,
-        job_notes,
-        repair_cost,
-        generated_message,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ job: data });
-  } catch (error) {
-    console.error("POST /api/jobs error:", error);
-    return NextResponse.json({ error: "Failed to save job" }, { status: 500 });
-  }
-}
-
-export async function PATCH(req: Request) {
-  try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await req.json();
-
-    const id = body.id;
-    const customer_name = body.customer_name?.trim();
-    const customer_phone = body.customer_phone?.trim() || "";
-    const customer_address = body.customer_address?.trim() || "";
-    const job_datetime = body.job_datetime;
-    const job_notes = body.job_notes?.trim();
-    const repair_cost =
-      body.repair_cost === "" || body.repair_cost === null || body.repair_cost === undefined
-        ? null
-        : Number(body.repair_cost);
-    const generated_message = body.generated_message?.trim() || "";
-
-    if (!id || !customer_name || !job_datetime || !job_notes) {
-      return NextResponse.json(
-        { error: "Missing required fields." },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabase
-      .from("jobs")
-      .update({
-        customer_name,
-        customer_phone,
-        customer_address,
-        job_datetime,
-        job_notes,
-        repair_cost,
-        generated_message,
-      })
-      .eq("id", id)
-      .eq("user_id", userId)
-      .select()
-      .single();
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ job: data });
-  } catch (error) {
-    console.error("PATCH /api/jobs error:", error);
-    return NextResponse.json({ error: "Failed to update job" }, { status: 500 });
-  }
-}
-
-export async function DELETE(req: Request) {
-  try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const url = new URL(req.url);
-    const id = url.searchParams.get("id");
-
-    if (!id) {
-      return NextResponse.json({ error: "Job id is required." }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from("jobs")
-      .delete()
-      .eq("id", id)
-      .eq("user_id", userId);
+    const { error } = await supabase.from("jobs").insert({
+      user_id: userId,
+      workspace_id: workspaceId,
+      customer_name,
+      customer_phone,
+      customer_address,
+      job_datetime,
+      job_notes,
+      repair_cost:
+        repair_cost === null || repair_cost === undefined || repair_cost === ""
+          ? null
+          : Number(Number(repair_cost).toFixed(2)),
+      generated_message,
+    });
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("DELETE /api/jobs error:", error);
-    return NextResponse.json({ error: "Failed to delete job" }, { status: 500 });
+  } catch (err) {
+    console.error("POST /api/jobs error:", err);
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

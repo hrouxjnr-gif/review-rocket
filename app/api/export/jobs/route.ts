@@ -1,5 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
+import { getWorkspaceId } from "@/lib/workspace";
 
 function escapeCsv(value: unknown) {
   const text = String(value ?? "");
@@ -16,10 +17,12 @@ export async function GET() {
     return new Response("Unauthorized", { status: 401 });
   }
 
+  const workspaceId = await getWorkspaceId(userId);
+
   const { data, error } = await supabase
     .from("jobs")
     .select("*")
-    .eq("user_id", userId)
+    .eq("workspace_id", workspaceId)
     .order("job_datetime", { ascending: false });
 
   if (error) {

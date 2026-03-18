@@ -1,23 +1,31 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getWorkspaceId } from "@/lib/workspace";
 
 export async function GET() {
-  const { userId } = await auth();
+  try {
+    const { userId } = await auth();
 
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!userId) {
+      return NextResponse.json({ reviews: [] });
+    }
+
+    const workspaceId = await getWorkspaceId(userId);
+
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("workspace_id", workspaceId)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      return NextResponse.json({ reviews: [], error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ reviews: data || [] });
+  } catch (err) {
+    console.error("GET /api/reviews error:", err);
+    return NextResponse.json({ reviews: [], error: "Server error" }, { status: 500 });
   }
-
-  const { data, error } = await supabase
-    .from("reviews")
-    .select("*")
-    .eq("user_id", userId)
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  return NextResponse.json({ reviews: data || [] });
 }

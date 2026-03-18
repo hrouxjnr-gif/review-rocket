@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 export default function SettingsPage() {
   const [businessName, setBusinessName] = useState("");
   const [reviewLink, setReviewLink] = useState("");
+  const [currency, setCurrency] = useState("R");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
@@ -17,6 +18,7 @@ export default function SettingsPage() {
       if (data.settings) {
         setBusinessName(data.settings.business_name || "");
         setReviewLink(data.settings.review_link || "");
+        setCurrency(data.settings.currency || "R");
       }
     } catch {}
   };
@@ -38,6 +40,7 @@ export default function SettingsPage() {
         body: JSON.stringify({
           businessName,
           reviewLink,
+          currency,
         }),
       });
 
@@ -77,6 +80,15 @@ export default function SettingsPage() {
             placeholder="Google review link"
             value={reviewLink}
             onChange={(e) => setReviewLink(e.target.value)}
+          />
+
+          <div style={{ height: 12 }} />
+
+          <input
+            type="text"
+            placeholder="Currency symbol or code (example: R, AUD, $, £, €)"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
           />
 
           <div className="button-row">

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getWorkspaceId } from "@/lib/workspace";
 
 type JobRow = {
   id: number;
@@ -22,13 +23,15 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const workspaceId = await getWorkspaceId(userId);
+
     const url = new URL(req.url);
     const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
 
     const { data, error } = await supabase
       .from("jobs")
       .select("*")
-      .eq("user_id", userId)
+      .eq("workspace_id", workspaceId)
       .order("job_datetime", { ascending: false });
 
     if (error) {

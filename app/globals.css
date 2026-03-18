@@ -343,7 +343,6 @@ button {
     white;
 }
 
-/* HEADER */
 .app-header-shell {
   position: relative;
 }
@@ -432,7 +431,6 @@ button {
   border-radius: 10px;
 }
 
-/* Tablet */
 @media (max-width: 900px) {
   .hero-grid,
   .content-grid,
@@ -469,7 +467,6 @@ button {
   }
 }
 
-/* Phone */
 @media (max-width: 640px) {
   .topbar {
     align-items: flex-start;

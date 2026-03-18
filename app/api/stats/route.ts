@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { supabase } from "@/lib/supabase";
+import { getWorkspaceId } from "@/lib/workspace";
 
 export async function GET() {
   try {
@@ -10,10 +11,12 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const workspaceId = await getWorkspaceId(userId);
+
     const { data, error } = await supabase
       .from("jobs")
       .select("*")
-      .eq("user_id", userId);
+      .eq("workspace_id", workspaceId);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });

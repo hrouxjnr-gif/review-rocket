@@ -15,6 +15,7 @@ type UsageData = {
   limit: number;
   used: number;
   remaining: number;
+  maxUsers: number;
 };
 
 type StatsData = {
@@ -37,6 +38,7 @@ export default function DashboardPage() {
   const [repairCost, setRepairCost] = useState("");
   const [businessName, setBusinessName] = useState("");
   const [reviewLink, setReviewLink] = useState("");
+  const [currency, setCurrency] = useState("R");
   const [template, setTemplate] = useState("friendly");
   const [text, setText] = useState("");
   const [review, setReview] = useState("");
@@ -66,6 +68,7 @@ export default function DashboardPage() {
       if (data.settings) {
         setBusinessName(data.settings.business_name || "");
         setReviewLink(data.settings.review_link || "");
+        setCurrency(data.settings.currency || "R");
       }
     } catch {}
   };
@@ -110,7 +113,7 @@ export default function DashboardPage() {
     }
 
     if (usage && usage.remaining <= 0) {
-      setReview(`You reached your free limit of ${usage.limit} messages this month.`);
+      setReview(`You reached your ${usage.plan} plan limit of ${usage.limit} messages this month.`);
       return;
     }
 
@@ -223,9 +226,21 @@ export default function DashboardPage() {
             <div className="card">
               <h3 style={{ marginTop: 0 }}>Total Revenue</h3>
               <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
-                R {stats.totalRevenue.toFixed(2)}
+                {currency} {stats.totalRevenue.toFixed(2)}
               </p>
             </div>
+
+            {usage && (
+              <div className="card">
+                <h3 style={{ marginTop: 0 }}>Plan</h3>
+                <p style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
+                  {usage.plan}
+                </p>
+                <p style={{ marginTop: 8, color: "#475569" }}>
+                  Users: {usage.maxUsers >= 9999 ? "Unlimited" : usage.maxUsers}
+                </p>
+              </div>
+            )}
           </div>
         )}
 
@@ -237,7 +252,7 @@ export default function DashboardPage() {
             <p style={{ marginTop: 8 }}>
               {usage.remaining > 0
                 ? `${usage.remaining} ${usage.remaining === 1 ? "message" : "messages"} remaining this month.`
-                : `You reached your free limit of ${usage.limit} messages this month.`}
+                : `You reached your ${usage.plan} plan limit of ${usage.limit} messages this month.`}
             </p>
           </div>
         )}
@@ -280,10 +295,14 @@ export default function DashboardPage() {
             <input
               type="number"
               step="0.01"
-              placeholder="Repair cost"
+              placeholder={`Repair cost (${currency})`}
               value={repairCost}
               onChange={(e) => setRepairCost(e.target.value)}
             />
+            <div style={{ height: 8 }} />
+            <p className="muted-text" style={{ margin: 0 }}>
+              Current currency: <strong>{currency}</strong>
+            </p>
             <div style={{ height: 12 }} />
 
             <input
@@ -388,7 +407,7 @@ export default function DashboardPage() {
                       {new Date(job.job_datetime).toLocaleString()}
                     </p>
                     <p className="list-gap">
-                      Cost: {job.repair_cost !== null ? `R ${job.repair_cost}` : "Not added"}
+                      Cost: {job.repair_cost !== null ? `${currency} ${job.repair_cost}` : "Not added"}
                     </p>
                   </div>
                 ))}
