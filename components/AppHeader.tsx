@@ -40,15 +40,39 @@ export default function AppHeader({
     <>
       <header className="fixed-app-header">
         <div className="fixed-app-header-inner">
-          <Link href="/" onClick={closeMenu} className="app-header-logo-link">
-            <img
-              src="/logo.png"
-              alt="Roux Review Rocket logo"
-              className="app-logo"
-            />
-          </Link>
+          <div className="header-top-row">
+            <Link href="/" onClick={closeMenu} className="app-header-logo-link">
+              <img
+                src="/logo.png"
+                alt="Roux Review Rocket logo"
+                className="app-logo"
+              />
+            </Link>
 
-          <div className="app-header-right" ref={menuRef}>
+            {showUserButton && isLoaded && isSignedIn && (
+              <div className="user-button-wrap header-user-top">
+                <UserButton />
+              </div>
+            )}
+
+            {showUserButton && isLoaded && !isSignedIn && (
+              <div className="auth-buttons-row header-auth-top">
+                <SignInButton>
+                  <button type="button" className="btn-outline auth-btn-small">
+                    Sign In
+                  </button>
+                </SignInButton>
+
+                <SignUpButton>
+                  <button type="button" className="btn auth-btn-small">
+                    Sign Up
+                  </button>
+                </SignUpButton>
+              </div>
+            )}
+          </div>
+
+          <div className="header-bottom-row" ref={menuRef}>
             <div className="app-header-main-links">
               <Link href="/" className="nav-link" onClick={closeMenu}>
                 Home
@@ -66,28 +90,6 @@ export default function AppHeader({
             >
               ☰ Menu
             </button>
-
-            {showUserButton && isLoaded && !isSignedIn && (
-              <div className="auth-buttons-row">
-                <SignInButton>
-                  <button type="button" className="btn-outline auth-btn-small">
-                    Sign In
-                  </button>
-                </SignInButton>
-
-                <SignUpButton>
-                  <button type="button" className="btn auth-btn-small">
-                    Sign Up
-                  </button>
-                </SignUpButton>
-              </div>
-            )}
-
-            {showUserButton && isLoaded && isSignedIn && (
-              <div className="user-button-wrap">
-                <UserButton />
-              </div>
-            )}
 
             {menuOpen && (
               <div className="app-menu-dropdown">

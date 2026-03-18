@@ -81,9 +81,7 @@ button {
 .fixed-app-header-inner {
   width: min(1180px, calc(100vw - 16px));
   display: grid;
-  grid-template-columns: auto 1fr;
-  align-items: center;
-  gap: 18px;
+  gap: 12px;
   padding: 12px 16px;
   background: #ffffff;
   border: 1px solid #e2e8f0;
@@ -92,8 +90,24 @@ button {
   pointer-events: auto;
 }
 
+.header-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.header-bottom-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
 .app-header-spacer {
-  height: 96px;
+  height: 132px;
 }
 
 .app-header-logo-link {
@@ -161,8 +175,15 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
+}
 
-  transform: translate(-4px);
+.header-user-top {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.header-auth-top {
+  justify-content: flex-end;
 }
 
 .app-menu-dropdown {
@@ -471,26 +492,15 @@ button {
   .fixed-app-header-inner {
     width: calc(100vw - 12px);
     padding: 12px 14px;
-    gap: 14px;
+    gap: 12px;
   }
 
   .app-header-spacer {
-    height: 94px;
-  }
-
-  .app-header-row,
-  .fixed-app-header-inner {
-    grid-template-columns: 1fr;
-    align-items: flex-start;
+    height: 124px;
   }
 
   .app-logo {
-    width: 150px;
-  }
-
-  .app-header-right {
-    width: 100%;
-    justify-content: space-between;
+    width: 140px;
   }
 }
 
@@ -539,12 +549,21 @@ button {
     gap: 10px;
   }
 
+  .header-top-row {
+    align-items: center;
+  }
+
+  .header-bottom-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .app-header-spacer {
-    height: 112px;
+    height: 138px;
   }
 
   .app-logo {
-    width: 128px;
+    width: 120px;
   }
 
   .nav-link {
@@ -558,23 +577,18 @@ button {
     padding: 8px 10px;
   }
 
-  .app-header-right {
-    align-items: flex-start;
+  .app-header-main-links {
+    width: 100%;
+    justify-content: flex-start;
     gap: 8px;
-    flex-wrap: wrap;
   }
 
-  .app-header-main-links {
-    gap: 4px;
+  .header-user-top {
+    margin-top: 0;
   }
 
   .app-menu-dropdown {
     right: 0;
     width: min(240px, calc(100vw - 20px));
-  }
-  @media (max-width: 640px) {
-    .user-button-wrap{ 
-      transform: translate(-8);
-    }
   }
 }
