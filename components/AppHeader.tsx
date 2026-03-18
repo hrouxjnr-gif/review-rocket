@@ -38,68 +38,18 @@ export default function AppHeader({
 
   return (
     <>
-      <header
-        style={{
-          position: "fixed",
-          top: 8,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: "min(1180px, calc(100vw - 12px))",
-          zIndex: 99999,
-          padding: "16px 20px",
-          background: "rgba(255, 255, 255, 0.95)",
-          backdropFilter: "blur(10px)",
-          border: "1px solid rgba(226, 232, 240, 0.9)",
-          borderRadius: 22,
-          boxShadow: "0 10px 30px rgba(15, 23, 42, 0.08)",
-        }}
-      >
-        <div
-          style={{
-            width: "100%",
-            display: "grid",
-            gridTemplateColumns: "auto 1fr",
-            alignItems: "center",
-            gap: 24,
-          }}
-        >
-          <Link
-            href="/"
-            onClick={closeMenu}
-            style={{ display: "inline-flex", alignItems: "center" }}
-          >
+      <header className="fixed-app-header">
+        <div className="fixed-app-header-inner">
+          <Link href="/" onClick={closeMenu} className="app-header-logo-link">
             <img
               src="/logo.png"
               alt="Roux Review Rocket logo"
-              style={{
-                width: 180,
-                height: "auto",
-                display: "block",
-                maxWidth: "100%",
-              }}
+              className="app-logo"
             />
           </Link>
 
-          <div
-            ref={menuRef}
-            style={{
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "flex-end",
-              gap: 14,
-              minWidth: 0,
-              flexWrap: "wrap",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                flexWrap: "wrap",
-              }}
-            >
+          <div className="app-header-right" ref={menuRef}>
+            <div className="app-header-main-links">
               <Link href="/" className="nav-link" onClick={closeMenu}>
                 Home
               </Link>
@@ -111,30 +61,22 @@ export default function AppHeader({
 
             <button
               type="button"
-              className="btn-outline"
+              className="btn-outline menu-toggle-btn"
               onClick={() => setMenuOpen((prev) => !prev)}
-              style={{ minHeight: 42, whiteSpace: "nowrap" }}
             >
               ☰ Menu
             </button>
 
             {showUserButton && isLoaded && !isSignedIn && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  flexWrap: "wrap",
-                }}
-              >
+              <div className="auth-buttons-row">
                 <SignInButton>
-                  <button type="button" className="btn-outline">
+                  <button type="button" className="btn-outline auth-btn-small">
                     Sign In
                   </button>
                 </SignInButton>
 
                 <SignUpButton>
-                  <button type="button" className="btn">
+                  <button type="button" className="btn auth-btn-small">
                     Sign Up
                   </button>
                 </SignUpButton>
@@ -142,33 +84,14 @@ export default function AppHeader({
             )}
 
             {showUserButton && isLoaded && isSignedIn && (
-              <div style={{ display: "flex", alignItems: "center" }}>
+              <div className="user-button-wrap">
                 <UserButton />
               </div>
             )}
 
             {menuOpen && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "calc(100% + 10px)",
-                  right: 0,
-                  width: 260,
-                  maxWidth: "calc(100vw - 32px)",
-                  background: "white",
-                  border: "1px solid #e2e8f0",
-                  borderRadius: 18,
-                  boxShadow: "0 18px 40px rgba(15, 23, 42, 0.12)",
-                  padding: 12,
-                  zIndex: 100000,
-                }}
-              >
-                <div
-                  style={{
-                    display: "grid",
-                    gap: 8,
-                  }}
-                >
+              <div className="app-menu-dropdown">
+                <div className="app-menu-links">
                   <Link href="/calendar" className="nav-link" onClick={closeMenu}>
                     Calendar
                   </Link>
@@ -203,7 +126,7 @@ export default function AppHeader({
         </div>
       </header>
 
-      <div style={{ height: 110 }} />
+      <div className="app-header-spacer" />
     </>
   );
 }
