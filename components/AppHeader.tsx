@@ -180,21 +180,6 @@ export default function AppHeader({
         </div>
 
         <div className="site-header__right" ref={menuWrapRef}>
-          {showUserButton && (
-            <div className="site-user-chip">
-              <UserButton
-                appearance={{
-                  elements: {
-                    userButtonAvatarBox: {
-                      width: "40px",
-                      height: "40px",
-                    },
-                  },
-                }}
-              />
-            </div>
-          )}
-
           <div className="site-menu-wrap">
             <button
               type="button"
@@ -232,18 +217,44 @@ export default function AppHeader({
                   </p>
                 </div>
 
-                <div className="site-menu-active-card">
-                  <div className="site-menu-active-card__label">Current page</div>
-                  <div className="site-menu-active-card__value">
-                    {activeMenuLabel}
+                <div className="site-menu-top-right">
+                  <div className="site-menu-active-card">
+                    <div className="site-menu-active-card__label">
+                      Current page
+                    </div>
+                    <div className="site-menu-active-card__value">
+                      {activeMenuLabel}
+                    </div>
                   </div>
+
+                  {showUserButton && (
+                    <div className="site-menu-account-card">
+                      <div className="site-menu-account-card__label">
+                        Account
+                      </div>
+                      <div className="site-menu-account-card__button">
+                        <UserButton
+                          appearance={{
+                            elements: {
+                              userButtonAvatarBox: {
+                                width: "40px",
+                                height: "40px",
+                              },
+                            },
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="site-menu-sections">
                 {menuSections.map((section) => (
                   <div key={section.title} className="site-menu-section">
-                    <div className="site-menu-section__title">{section.title}</div>
+                    <div className="site-menu-section__title">
+                      {section.title}
+                    </div>
 
                     <div className="site-menu-grid">
                       {section.items.map((item) => (
@@ -292,7 +303,7 @@ export default function AppHeader({
         .site-header__left {
           display: flex;
           align-items: center;
-          gap: 19px;
+          gap: 14px;
           min-width: 0;
           flex: 1 1 auto;
         }
@@ -319,31 +330,13 @@ export default function AppHeader({
           position: relative;
         }
 
-        .site-user-chip {
-          width: 46px;
-          height: 45px;
-          border-radius: 999px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          background: radial-gradient(
-            circle at 30% 30%,
-            rgba(255, 182, 255, 0.92) 0%,
-            rgba(216, 149, 255, 0.85) 42%,
-            rgba(136, 92, 246, 0.9) 100%
-          );
-          box-shadow:
-            0 8px 24px rgba(161, 98, 255, 0.28),
-            inset 0 0 0 1px rgba(255, 255, 255, 0.26);
-        }
-
         .site-menu-wrap {
           position: relative;
         }
 
         .site-menu-button {
-          min-height: 52px;
-          padding: 0 12px;
+          min-height: 46px;
+          padding: 0 14px;
           border-radius: 14px;
           border: 1px solid rgba(255, 255, 255, 0.14);
           background: linear-gradient(
@@ -428,15 +421,16 @@ export default function AppHeader({
           top: calc(100% + 12px);
           right: 0;
           width: min(430px, calc(100vw - 24px));
+          max-height: min(78vh, 760px);
+          overflow-y: auto;
           padding: 14px;
           border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.12);
-          background:
-            linear-gradient(
-              180deg,
-              rgba(9, 18, 32, 0.97) 0%,
-              rgba(11, 31, 53, 0.98) 100%
-            );
+          background: linear-gradient(
+            180deg,
+            rgba(9, 18, 32, 0.97) 0%,
+            rgba(11, 31, 53, 0.98) 100%
+          );
           box-shadow:
             0 24px 60px rgba(0, 0, 0, 0.34),
             inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -462,6 +456,11 @@ export default function AppHeader({
           gap: 12px;
           padding: 4px 2px 14px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .site-menu-top-right {
+          display: grid;
+          gap: 10px;
         }
 
         .site-menu-badge {
@@ -517,6 +516,29 @@ export default function AppHeader({
           font-size: 18px;
           font-weight: 900;
           line-height: 1.1;
+        }
+
+        .site-menu-account-card {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          border-radius: 16px;
+          padding: 12px;
+          background: rgba(255, 255, 255, 0.05);
+          border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .site-menu-account-card__label {
+          font-size: 13px;
+          font-weight: 800;
+          color: rgba(255, 255, 255, 0.82);
+        }
+
+        .site-menu-account-card__button {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
 
         .site-menu-sections {
@@ -628,11 +650,6 @@ export default function AppHeader({
         @media (max-width: 520px) {
           .site-logo__image {
             width: 118px;
-          }
-
-          .site-user-chip {
-            width: 42px;
-            height: 42px;
           }
 
           .site-menu-button {
