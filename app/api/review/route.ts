@@ -1,9 +1,58 @@
-import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { supabase } from "@/lib/supabase";
-import { PLAN_CONFIG, normalizePlan } from "@/lib/plans";
 import { getWorkspaceId } from "@/lib/workspace";
-import { rewriteReviewMessage } from "@/lib/rewrite";
+
+function buildReviewMessage(params: {
+  customerName: string;
+  jobNotes: string;
+  repairCost: string;
+  businessName: string;
+  reviewLink: string;
+  style: string;
+}) {
+  const {
+    customerName,
+    jobNotes,
+    repairCost,
+    businessName,
+    reviewLink,
+    style,
+  } = params;
+
+  const cleanName = customerName || "there";
+  const cleanNotes = jobNotes || "the recent work completed";
+  const cleanCost = repairCost ? ` The total came to ${repairCost}.` : "";
+  const linkLine = reviewLink
+    ? ` You can leave a review here: ${reviewLink}`
+    : "";
+
+  if (style === "friendly") {
+    return `Hi ${cleanName}, thanks again for choosing ${businessName}. We completed ${cleanNotes}.${cleanCost} If you were happy with the service, we would really appreciate a quick review.${linkLine}`;
+  }
+
+  if (style === "short") {
+    return `Hi ${cleanName}, thanks for choosing ${businessName}. We completed ${cleanNotes}.${cleanCost} We would appreciate a review.${linkLine}`;
+  }
+
+  if (style === "follow-up") {
+    return `Hi ${cleanName}, just following up after the recent job for ${cleanNotes}.${cleanCost} Thank you for choosing ${businessName}. If you were happy with our service, we would appreciate a review.${linkLine}`;
+  }
+
+  return `Hi ${cleanName}, thank you for choosing ${businessName}. We completed ${cleanNotes}.${cleanCost} If you were satisfied with the service provided, we would really appreciate your review.${linkLine}`;
+}
+
+function normalizeDatetime(value: string) {
+  if (!value) return new Date().toISOString();
+
+  const parsed = new Date(value);
+
+  if (Number.isNaN(parsed.getTime())) {
+    return new Date().toISOString();
+  }
+
+  return parsed.toISOString();
+}
 
 export async function POST(req: Request) {
   try {
@@ -17,87 +66,139 @@ export async function POST(req: Request) {
     }
 
     const workspaceId = await getWorkspaceId(userId);
-
-    const { data: subscription } = await supabase
-      .from("subscriptions")
-      .select("*")
-      .eq("user_id", workspaceId)
-      .maybeSingle();
-
-    const plan = normalizePlan(subscription?.plan);
-    const config = PLAN_CONFIG[plan];
-
-    const now = new Date();
-    const startOfMonth = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      1
-    ).toISOString();
-
-    const { count, error: countError } = await supabase
-      .from("reviews")
-      .select("*", { count: "exact", head: true })
-      .eq("workspace_id", workspaceId)
-      .gte("created_at", startOfMonth);
-
-    if (countError) {
-      return NextResponse.json(
-        { error: countError.message },
-        { status: 500 }
-      );
-    }
-
-    const usedThisMonth = count || 0;
-
-    if (usedThisMonth >= config.monthlyLimit) {
-      return NextResponse.json(
-        {
-          error: `You reached your ${config.name} plan limit of ${config.monthlyLimit} messages this month.`,
-        },
-        { status: 403 }
-      );
-    }
-
     const body = await req.json();
-    const inputText = body.text?.trim();
-    const customerName = body.customerName?.trim() || "";
-    const businessName = body.businessName?.trim() || "";
-    const reviewLink = body.reviewLink?.trim() || "";
-    const template = body.template?.trim() || "friendly";
 
-    if (!inputText) {
+    const customerName = String(
+      body.customer_name ??
+        body.customerName ??
+        body.name ??
+        ""
+    ).trim();
+
+    const customerPhone = String(
+      body.phone ??
+        body.customerPhone ??
+        ""
+    ).trim();
+
+    const customerAddress = String(
+      body.address ??
+        body.customerAddress ??
+        ""
+    ).trim();
+
+    const jobNotes = String(
+      body.notes ??
+        body.jobNotes ??
+        body.input_text ??
+        ""
+    ).trim();
+
+    const repairCostRaw = String(
+      body.cost ??
+        body.repairCost ??
+        ""
+    ).trim();
+
+    const style = String(
+      body.style ??
+        body.messageStyle ??
+        "professional"
+    ).trim();
+
+    const rawJobDatetime = String(
+      body.job_datetime ??
+        body.jobDateTime ??
+        body.job_date ??
+        body.date ??
+        ""
+    ).trim();
+
+    const jobDatetime = normalizeDatetime(rawJobDatetime);
+
+    if (!jobNotes) {
       return NextResponse.json(
         { error: "No text provided" },
         { status: 400 }
       );
     }
 
-    const outputText = rewriteReviewMessage({
-      template,
-      notes: inputText,
+    const repairCostNumber = repairCostRaw ? Number(repairCostRaw) : 0;
+
+    const { data: settingsData } = await supabase
+      .from("settings")
+      .select("business_name,currency,review_link")
+      .eq("user_id", workspaceId || userId)
+      .maybeSingle();
+
+    const businessName =
+      settingsData?.business_name || "Roux Review Rocket";
+    const currency =
+      settingsData?.currency || "";
+    const reviewLink =
+      settingsData?.review_link || "";
+
+    const formattedCost =
+      repairCostRaw && !Number.isNaN(repairCostNumber)
+        ? `${currency}${repairCostRaw}`
+        : "";
+
+    const outputText = buildReviewMessage({
       customerName,
+      jobNotes,
+      repairCost: formattedCost,
       businessName,
       reviewLink,
+      style,
     });
 
-    const { error } = await supabase.from("reviews").insert({
+    const reviewInsert = await supabase.from("reviews").insert({
       user_id: userId,
       workspace_id: workspaceId,
-      input_text: inputText,
+      input_text: jobNotes,
       output_text: outputText,
     });
 
-    if (error) {
+    if (reviewInsert.error) {
+      console.error("Review insert error:", reviewInsert.error);
       return NextResponse.json(
-        { error: error.message },
+        {
+          error: `Message generated but review save failed: ${reviewInsert.error.message}`,
+          output_text: outputText,
+        },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ review: outputText });
-  } catch (error) {
-    console.error("Review API error:", error);
+    const jobInsert = await supabase.from("jobs").insert({
+      user_id: userId,
+      workspace_id: workspaceId,
+      customer_name: customerName,
+      customer_phone: customerPhone,
+      customer_address: customerAddress,
+      job_datetime: jobDatetime,
+      job_notes: jobNotes,
+      repair_cost: Number.isNaN(repairCostNumber) ? 0 : repairCostNumber,
+      generated_message: outputText,
+    });
 
+    if (jobInsert.error) {
+      console.error("Job insert error:", jobInsert.error);
+      return NextResponse.json(
+        {
+          error: `Message generated but job save failed: ${jobInsert.error.message}`,
+          output_text: outputText,
+        },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      output_text: outputText,
+    });
+  } catch (error) {
+    console.error("POST /api/review error:", error);
     return NextResponse.json(
       { error: "Server error" },
       { status: 500 }

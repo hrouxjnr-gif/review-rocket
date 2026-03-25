@@ -8,51 +8,62 @@ export async function GET() {
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json({
+        totalJobs: 0,
+        jobsToday: 0,
+        plan: "free",
+      });
     }
 
     const workspaceId = await getWorkspaceId(userId);
 
-    const { data, error } = await supabase
+    const { count: totalJobsCount, error: totalError } = await supabase
       .from("jobs")
-      .select("*")
+      .select("*", { count: "exact", head: true })
       .eq("workspace_id", workspaceId);
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+    if (totalError) {
+      console.error("Total jobs error:", totalError);
     }
 
-    const jobs = data || [];
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
 
-    const today = new Date();
-    const todayDate = today.toISOString().split("T")[0];
+    const todayIso = startOfToday.toISOString();
 
-    const jobsToday = jobs.filter((job) => {
-      const jobDate = new Date(job.job_datetime).toISOString().split("T")[0];
-      return jobDate === todayDate;
-    });
+    const { count: jobsTodayCount, error: todayError } = await supabase
+      .from("jobs")
+      .select("*", { count: "exact", head: true })
+      .eq("workspace_id", workspaceId)
+      .gte("created_at", todayIso);
 
-    const totalRevenue = jobs.reduce(
-      (sum, job) => sum + Number(job.repair_cost || 0),
-      0
-    );
+    if (todayError) {
+      console.error("Jobs today error:", todayError);
+    }
+
+    const { data: subscriptionData, error: subError } = await supabase
+      .from("subscriptions")
+      .select("plan")
+      .eq("user_id", workspaceId)
+      .maybeSingle();
+
+    if (subError) {
+      console.error("Subscription error:", subError);
+    }
 
     return NextResponse.json({
-      totalJobs: jobs.length,
-      jobsToday: jobsToday.length,
-      totalRevenue,
-      latestTodayJobs: jobsToday
-        .sort(
-          (a, b) =>
-            new Date(b.job_datetime).getTime() -
-            new Date(a.job_datetime).getTime()
-        )
-        .slice(0, 5),
+      totalJobs: Number(totalJobsCount || 0),
+      jobsToday: Number(jobsTodayCount || 0),
+      plan: subscriptionData?.plan || "free",
     });
   } catch (error) {
     console.error("GET /api/stats error:", error);
     return NextResponse.json(
-      { error: "Failed to load stats" },
+      {
+        totalJobs: 0,
+        jobsToday: 0,
+        plan: "free",
+      },
       { status: 500 }
     );
   }

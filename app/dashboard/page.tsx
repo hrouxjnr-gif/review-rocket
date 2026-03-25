@@ -1,455 +1,334 @@
 "use client";
 
 import AppHeader from "@/components/AppHeader";
-import { useEffect, useState } from "react";
-
-type ReviewItem = {
-  id: number;
-  input_text: string;
-  output_text: string;
-  created_at: string;
-};
-
-type UsageData = {
-  plan: string;
-  limit: number;
-  used: number;
-  remaining: number;
-  maxUsers: number;
-};
-
-type StatsData = {
-  totalJobs: number;
-  jobsToday: number;
-  totalRevenue: number;
-  latestTodayJobs: Array<{
-    id: number;
-    customer_name: string;
-    job_datetime: string;
-    repair_cost: number | null;
-  }>;
-};
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 
 export default function DashboardPage() {
+  const [stats, setStats] = useState<any>({});
+  const [usage, setUsage] = useState<any>({});
+  const [settings, setSettings] = useState<any>({});
+  const [recentReviews, setRecentReviews] = useState<any[]>([]);
+
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerAddress, setCustomerAddress] = useState("");
-  const [jobDatetime, setJobDatetime] = useState("");
+  const [jobDateTime, setJobDateTime] = useState("");
+  const [jobNotes, setJobNotes] = useState("");
   const [repairCost, setRepairCost] = useState("");
-  const [businessName, setBusinessName] = useState("");
-  const [reviewLink, setReviewLink] = useState("");
-  const [currency, setCurrency] = useState("R");
-  const [template, setTemplate] = useState("friendly");
-  const [text, setText] = useState("");
-  const [review, setReview] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [history, setHistory] = useState<ReviewItem[]>([]);
-  const [historyLoading, setHistoryLoading] = useState(true);
-  const [copyMessage, setCopyMessage] = useState("Copy Message");
-  const [usage, setUsage] = useState<UsageData | null>(null);
-  const [stats, setStats] = useState<StatsData | null>(null);
 
-  const loadHistory = async () => {
-    setHistoryLoading(true);
-    try {
-      const res = await fetch("/api/reviews");
-      const data = await res.json();
-      setHistory(data.reviews || []);
-    } catch {
-      setHistory([]);
-    }
-    setHistoryLoading(false);
-  };
+  const [generatedMessage, setGeneratedMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
-  const loadSettings = async () => {
-    try {
-      const res = await fetch("/api/settings");
-      const data = await res.json();
-      if (data.settings) {
-        setBusinessName(data.settings.business_name || "");
-        setReviewLink(data.settings.review_link || "");
-        setCurrency(data.settings.currency || "R");
-      }
-    } catch {}
-  };
+  const [copied, setCopied] = useState(false);
 
-  const loadUsage = async () => {
-    try {
-      const res = await fetch("/api/usage");
-      const data = await res.json();
-      if (!data.error) setUsage(data);
-    } catch {}
-  };
+  const totalJobs = Number(stats.totalJobs ?? 0);
+  const jobsToday = Number(stats.jobsToday ?? 0);
+  const currentPlan = String(usage.plan ?? stats.plan ?? "free");
+  const messagesUsed = Number(usage.used ?? 0);
+  const monthlyLimit = Number(usage.limit ?? 0);
 
-  const loadStats = async () => {
-    try {
-      const res = await fetch("/api/stats");
-      const data = await res.json();
-      if (!data.error) setStats(data);
-    } catch {}
+  const usagePercent = useMemo(() => {
+    if (!monthlyLimit) return 0;
+    return Math.min((messagesUsed / monthlyLimit) * 100, 100);
+  }, [messagesUsed, monthlyLimit]);
+
+  const load = async () => {
+    const [s, u, r] = await Promise.all([
+      fetch("/api/stats"),
+      fetch("/api/usage"),
+      fetch("/api/reviews"),
+    ]);
+
+    setStats(await s.json());
+    setUsage(await u.json());
+
+    const data = await r.json();
+    setRecentReviews(data.reviews || []);
   };
 
   useEffect(() => {
-    loadHistory();
-    loadSettings();
-    loadUsage();
-    loadStats();
+    load();
   }, []);
 
-  const handleGenerate = async () => {
-    if (!text.trim()) {
-      setReview("Please enter some job notes first.");
-      return;
+  const generate = async () => {
+    setSubmitting(true);
+    setCopied(false);
+
+    const res = await fetch("/api/review", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        customer_name: customerName,
+        phone: customerPhone,
+        address: customerAddress,
+        job_datetime: jobDateTime,
+        notes: jobNotes,
+        cost: repairCost,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data.output_text) {
+      setGeneratedMessage(data.output_text);
+      load();
     }
 
-    if (!customerName.trim()) {
-      setReview("Please enter the customer name.");
-      return;
-    }
-
-    if (!jobDatetime) {
-      setReview("Please enter the job date and time.");
-      return;
-    }
-
-    if (usage && usage.remaining <= 0) {
-      setReview(`You reached your ${usage.plan} plan limit of ${usage.limit} messages this month.`);
-      return;
-    }
-
-    setLoading(true);
-    setReview("");
-    setCopyMessage("Copy Message");
-
-    try {
-      const res = await fetch("/api/review", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text,
-          customerName,
-          businessName,
-          reviewLink,
-          template,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.review) {
-        setReview(data.review);
-
-        await fetch("/api/jobs", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            customer_name: customerName,
-            customer_phone: customerPhone,
-            customer_address: customerAddress,
-            job_datetime: new Date(jobDatetime).toISOString(),
-            job_notes: text,
-            repair_cost: repairCost,
-            generated_message: data.review,
-          }),
-        });
-
-        setText("");
-        setCustomerName("");
-        setCustomerPhone("");
-        setCustomerAddress("");
-        setJobDatetime("");
-        setRepairCost("");
-
-        loadHistory();
-        loadUsage();
-        loadStats();
-      } else {
-        setReview(data.error || "Something went wrong");
-      }
-    } catch {
-      setReview("Something went wrong");
-    }
-
-    setLoading(false);
+    setSubmitting(false);
   };
 
-  const handleCopy = async () => {
-    if (!review) return;
-    try {
-      await navigator.clipboard.writeText(review);
-      setCopyMessage("Copied!");
-      setTimeout(() => setCopyMessage("Copy Message"), 2000);
-    } catch {
-      setCopyMessage("Copy failed");
-      setTimeout(() => setCopyMessage("Copy Message"), 2000);
-    }
+  const copy = async () => {
+    if (!generatedMessage) return;
+
+    await navigator.clipboard.writeText(generatedMessage);
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 2000);
   };
 
-  const whatsappUrl = review
-    ? `https://wa.me/?text=${encodeURIComponent(review)}`
-    : "#";
+  const whatsapp = () => {
+    if (!generatedMessage) return;
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(generatedMessage)}`
+    );
+  };
 
-  const smsUrl = review ? `sms:?body=${encodeURIComponent(review)}` : "#";
+  const sms = () => {
+    if (!generatedMessage) return;
+    window.location.href = `sms:?&body=${encodeURIComponent(
+      generatedMessage
+    )}`;
+  };
+
+  const email = () => {
+    if (!generatedMessage) return;
+    window.location.href = `mailto:?body=${encodeURIComponent(
+      generatedMessage
+    )}`;
+  };
 
   return (
     <main className="page-shell">
-      <div className="page-container">
-        <AppHeader />
+      <AppHeader />
 
-        {stats && (
-          <div
+      <div className="page-container" style={{ marginTop: 52 }}>
+        <div style={{ display: "grid", gap: 28 }}>
+          {/* STATS */}
+          <section
+            className="dashboard-stats-grid"
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 16,
-              marginBottom: 24,
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: 20,
+              marginTop: 8,
             }}
           >
-            <div className="card">
-              <h3 style={{ marginTop: 0 }}>Total Jobs</h3>
-              <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
-                {stats.totalJobs}
-              </p>
+            <div className="card" style={{ marginBottom: 0 }}>
+              <h3 style={{ marginBottom: 12 }}>Total Jobs</h3>
+              <h2>{totalJobs}</h2>
             </div>
 
-            <div className="card">
-              <h3 style={{ marginTop: 0 }}>Jobs Today</h3>
-              <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
-                {stats.jobsToday}
-              </p>
+            <div className="card" style={{ marginBottom: 0 }}>
+              <h3 style={{ marginBottom: 12 }}>Today</h3>
+              <h2>{jobsToday}</h2>
             </div>
 
-            <div className="card">
-              <h3 style={{ marginTop: 0 }}>Total Revenue</h3>
-              <p style={{ fontSize: 28, fontWeight: 700, margin: 0 }}>
-                {currency} {stats.totalRevenue.toFixed(2)}
-              </p>
+            <div className="card" style={{ marginBottom: 0 }}>
+              <h3 style={{ marginBottom: 12 }}>Plan</h3>
+              <h2>{currentPlan}</h2>
             </div>
 
-            {usage && (
-              <div className="card">
-                <h3 style={{ marginTop: 0 }}>Plan</h3>
-                <p style={{ fontSize: 22, fontWeight: 700, margin: 0 }}>
-                  {usage.plan}
-                </p>
-                <p style={{ marginTop: 8, color: "#475569" }}>
-                  Users: {usage.maxUsers >= 9999 ? "Unlimited" : usage.maxUsers}
-                </p>
-              </div>
-            )}
-          </div>
-        )}
+            <div className="card" style={{ marginBottom: 0 }}>
+              <h3 style={{ marginBottom: 12 }}>Usage</h3>
+              <h2>
+                {messagesUsed}/{monthlyLimit}
+              </h2>
+            </div>
+          </section>
 
-        {usage && (
-          <div className={`usage-box ${usage.remaining > 0 ? "good" : "bad"}`}>
-            <p className="main">
-              {usage.plan} Plan — {usage.used}/{usage.limit} messages used this month
-            </p>
-            <p style={{ marginTop: 8 }}>
-              {usage.remaining > 0
-                ? `${usage.remaining} ${usage.remaining === 1 ? "message" : "messages"} remaining this month.`
-                : `You reached your ${usage.plan} plan limit of ${usage.limit} messages this month.`}
-            </p>
-          </div>
-        )}
-
-        <section className="content-grid">
-          <div className="card">
-            <h2 className="section-title">Create Review Request</h2>
-
-            <input
-              type="text"
-              placeholder="Customer name"
-              value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
-            />
-            <div style={{ height: 12 }} />
-
-            <input
-              type="text"
-              placeholder="Customer phone"
-              value={customerPhone}
-              onChange={(e) => setCustomerPhone(e.target.value)}
-            />
-            <div style={{ height: 12 }} />
-
-            <input
-              type="text"
-              placeholder="Customer address"
-              value={customerAddress}
-              onChange={(e) => setCustomerAddress(e.target.value)}
-            />
-            <div style={{ height: 12 }} />
-
-            <input
-              type="datetime-local"
-              value={jobDatetime}
-              onChange={(e) => setJobDatetime(e.target.value)}
-            />
-            <div style={{ height: 12 }} />
-
-            <input
-              type="number"
-              step="0.01"
-              placeholder={`Repair cost (${currency})`}
-              value={repairCost}
-              onChange={(e) => setRepairCost(e.target.value)}
-            />
-            <div style={{ height: 8 }} />
-            <p className="muted-text" style={{ margin: 0 }}>
-              Current currency: <strong>{currency}</strong>
-            </p>
-            <div style={{ height: 12 }} />
-
-            <input
-              type="text"
-              placeholder="Business name"
-              value={businessName}
-              onChange={(e) => setBusinessName(e.target.value)}
-            />
-            <div style={{ height: 12 }} />
-
-            <input
-              type="text"
-              placeholder="Google review link"
-              value={reviewLink}
-              onChange={(e) => setReviewLink(e.target.value)}
-            />
-            <div style={{ height: 12 }} />
-
-            <select
-              value={template}
-              onChange={(e) => setTemplate(e.target.value)}
+          {/* USAGE */}
+          <section className="card" style={{ marginBottom: 0, padding: 28 }}>
+            <div
               style={{
-                width: "100%",
-                padding: "13px 14px",
-                borderRadius: 14,
-                border: "1px solid #d7e1ec",
-                background: "#ffffff",
-                color: "#0f172a",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: 18,
+                flexWrap: "wrap",
+                marginBottom: 18,
               }}
             >
-              <option value="friendly">Friendly</option>
-              <option value="professional">Professional</option>
-              <option value="short-sms">Short SMS</option>
-              <option value="follow-up">Follow-up Reminder</option>
-            </select>
-            <div style={{ height: 12 }} />
+              <div>
+                <h3 style={{ marginBottom: 10 }}>Monthly Usage</h3>
+                <p className="muted-text">
+                  {Math.max(monthlyLimit - messagesUsed, 0)} messages left
+                </p>
+              </div>
 
-            <textarea
-              rows={8}
-              placeholder="Example: fixed leaking pipe and explained the problem clearly"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-
-            <div className="button-row">
-              <button
-                onClick={handleGenerate}
-                className="btn"
-                disabled={loading || (usage ? usage.remaining <= 0 : false)}
-              >
-                {loading ? "Generating..." : "Generate + Auto Save"}
-              </button>
-
-              <button
-                onClick={handleCopy}
-                className="btn-outline"
-                disabled={!review}
-              >
-                {copyMessage}
-              </button>
-
-              <a
-                href={whatsappUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="btn-success"
-                style={{
-                  pointerEvents: review ? "auto" : "none",
-                  opacity: review ? 1 : 0.65,
-                }}
-              >
-                Send WhatsApp
-              </a>
-
-              <a
-                href={smsUrl}
-                className="btn-purple"
-                style={{
-                  pointerEvents: review ? "auto" : "none",
-                  opacity: review ? 1 : 0.65,
-                }}
-              >
-                Send SMS
-              </a>
+              <Link href="/pricing" className="btn-outline">
+                Change Plan
+              </Link>
             </div>
 
-            <div className="info-box">
-              <h3>Latest Result</h3>
-              <p>{review || "Your generated message will appear here."}</p>
+            <div
+              style={{
+                height: 12,
+                background: "#222",
+                borderRadius: 999,
+                overflow: "hidden",
+                marginTop: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: `${usagePercent}%`,
+                  height: "100%",
+                  background: "cyan",
+                  borderRadius: 999,
+                }}
+              />
             </div>
-          </div>
+          </section>
 
-          <div className="card">
-            <h2 className="section-title">Today’s Jobs</h2>
+          {/* MAIN */}
+          <section
+            className="dashboard-main-grid"
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 28,
+              alignItems: "stretch",
+              marginTop: 4,
+            }}
+          >
+            {/* FORM */}
+            <div className="card" style={{ marginBottom: 0, padding: 32 }}>
+              <h2 style={{ marginBottom: 22 }}>Create Review</h2>
 
-            {stats && stats.latestTodayJobs.length > 0 ? (
-              <div className="grid-list">
-                {stats.latestTodayJobs.map((job) => (
-                  <div key={job.id} className="list-card">
-                    <p><strong>{job.customer_name}</strong></p>
-                    <p className="list-gap">
-                      {new Date(job.job_datetime).toLocaleString()}
-                    </p>
-                    <p className="list-gap">
-                      Cost: {job.repair_cost !== null ? `${currency} ${job.repair_cost}` : "Not added"}
-                    </p>
-                  </div>
-                ))}
+              <div style={{ display: "grid", gap: 14 }}>
+                <input
+                  placeholder="Name"
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                />
+
+                <input
+                  placeholder="Phone"
+                  value={customerPhone}
+                  onChange={(e) => setCustomerPhone(e.target.value)}
+                />
+
+                <input
+                  placeholder="Address"
+                  value={customerAddress}
+                  onChange={(e) => setCustomerAddress(e.target.value)}
+                />
+
+                <input
+                  type="datetime-local"
+                  value={jobDateTime}
+                  onChange={(e) => setJobDateTime(e.target.value)}
+                />
+
+                <input
+                  placeholder="Cost"
+                  value={repairCost}
+                  onChange={(e) => setRepairCost(e.target.value)}
+                />
+
+                <textarea
+                  rows={5}
+                  placeholder="Notes"
+                  value={jobNotes}
+                  onChange={(e) => setJobNotes(e.target.value)}
+                />
+
+                <div style={{ paddingTop: 6 }}>
+                  <button className="btn" onClick={generate}>
+                    {submitting ? "Generating..." : "Generate"}
+                  </button>
+                </div>
               </div>
-            ) : (
-              <p className="muted-text">No jobs saved today yet.</p>
-            )}
+            </div>
 
-            <h2 className="section-title" style={{ marginTop: 28 }}>Recent Messages</h2>
+            {/* OUTPUT */}
+            <div className="card" style={{ marginBottom: 0, padding: 32 }}>
+              <h2 style={{ marginBottom: 22 }}>Generated Message</h2>
 
-            {historyLoading ? (
-              <p className="muted-text">Loading history...</p>
-            ) : history.length === 0 ? (
-              <p className="muted-text">No saved messages yet.</p>
-            ) : (
-              <div className="grid-list">
-                {history.slice(0, 5).map((item) => (
-                  <div key={item.id} className="list-card">
-                    <p><strong>Notes</strong></p>
-                    <p className="list-gap">{item.input_text}</p>
-
-                    <p className="list-gap"><strong>Generated Message</strong></p>
-                    <p
-                      className="list-gap"
-                      style={{ whiteSpace: "pre-wrap", color: "#1e3a8a" }}
-                    >
-                      {item.output_text}
-                    </p>
-
-                    <p
-                      className="list-gap"
-                      style={{ fontSize: 12, color: "#64748b" }}
-                    >
-                      Created: {new Date(item.created_at).toLocaleString()}
-                    </p>
+              {generatedMessage ? (
+                <>
+                  <div
+                    className="list-card"
+                    style={{
+                      marginBottom: 20,
+                      lineHeight: 1.8,
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {generatedMessage}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </section>
+
+                  <div className="button-row" style={{ gap: 12 }}>
+                    <button className="btn" onClick={copy}>
+                      {copied ? "Copied" : "Copy"}
+                    </button>
+
+                    <button className="btn-outline" onClick={whatsapp}>
+                      WhatsApp
+                    </button>
+
+                    <button className="btn-outline" onClick={sms}>
+                      SMS
+                    </button>
+
+                    <button className="btn-outline" onClick={email}>
+                      Email
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div
+                  style={{
+                    minHeight: 280,
+                    display: "flex",
+                    alignItems: "flex-start",
+                    paddingTop: 4,
+                  }}
+                >
+                  <p className="muted-text">No message yet</p>
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
       </div>
+
+      <style jsx>{`
+        .dashboard-stats-grid :global(.card),
+        .dashboard-main-grid :global(.card) {
+          position: relative;
+          z-index: 1;
+        }
+
+        @media (max-width: 980px) {
+          .dashboard-stats-grid {
+            grid-template-columns: repeat(2, 1fr) !important;
+          }
+
+          .dashboard-main-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .dashboard-stats-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
     </main>
   );
 }
