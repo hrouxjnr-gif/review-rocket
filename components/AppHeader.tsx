@@ -290,14 +290,23 @@ export default function AppHeader({
 
       <style jsx>{`
         .site-header {
-          position: relative;
+          position: sticky;
+          top: 0;
+          z-index: 1200;
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 14px;
-          padding: 6px 0 16px;
+          padding: 10px 0 16px;
           margin-bottom: 24px;
           border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+          background: linear-gradient(
+            180deg,
+            rgba(5, 10, 24, 0.96) 0%,
+            rgba(6, 16, 34, 0.92) 100%
+          );
+          backdrop-filter: blur(14px);
+          -webkit-backdrop-filter: blur(14px);
         }
 
         .site-header__left {
@@ -442,7 +451,7 @@ export default function AppHeader({
             opacity 0.18s ease,
             transform 0.18s ease,
             visibility 0.18s ease;
-          z-index: 1000;
+          z-index: 1300;
         }
 
         .site-menu-panel--open {
