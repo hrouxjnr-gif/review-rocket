@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 type JobRow = {
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const search = url.searchParams.get("search")?.trim().toLowerCase() || "";
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("jobs")
       .select("*")
       .eq("workspace_id", workspaceId)

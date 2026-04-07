@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 export async function GET() {
@@ -17,7 +17,7 @@ export async function GET() {
 
     const workspaceId = await getWorkspaceId(userId);
 
-    const { count: totalJobsCount, error: totalError } = await supabase
+    const { count: totalJobsCount, error: totalError } = await supabaseAdmin
       .from("jobs")
       .select("*", { count: "exact", head: true })
       .eq("workspace_id", workspaceId);
@@ -31,7 +31,7 @@ export async function GET() {
 
     const todayIso = startOfToday.toISOString();
 
-    const { count: jobsTodayCount, error: todayError } = await supabase
+    const { count: jobsTodayCount, error: todayError } = await supabaseAdmin
       .from("jobs")
       .select("*", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)
@@ -41,7 +41,7 @@ export async function GET() {
       console.error("Jobs today error:", todayError);
     }
 
-    const { data: subscriptionData, error: subError } = await supabase
+    const { data: subscriptionData, error: subError } = await supabaseAdmin
       .from("subscriptions")
       .select("plan")
       .eq("user_id", workspaceId)

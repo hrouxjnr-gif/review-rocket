@@ -1,8 +1,9 @@
 "use client";
 
 import AppHeader from "@/components/AppHeader";
-import { useEffect, useState } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { SignInButton, useAuth, useUser } from "@clerk/nextjs";
 
 type SubscriptionData = {
   plan: string;
@@ -12,13 +13,34 @@ type SubscriptionData = {
 
 export default function PricingPage() {
   const { user } = useUser();
+  const { isLoaded, isSignedIn } = useAuth();
+  const searchParams = useSearchParams();
+
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null);
   const [message, setMessage] = useState("");
   const [loadingPlan, setLoadingPlan] = useState<"free" | "pro" | "agency" | "">("");
+  const [autoStarted, setAutoStarted] = useState(false);
 
   const currentPlan = (subscription?.plan || "free").toLowerCase();
+  const showTestSwitches =
+    process.env.NEXT_PUBLIC_ALLOW_TEST_PLAN_SWITCHES === "true";
+
+  const pendingBuyPlan = useMemo(() => {
+    const raw = String(searchParams?.get("buy") || "").toLowerCase();
+    if (raw === "pro" || raw === "agency") return raw as "pro" | "agency";
+    return null;
+  }, [searchParams]);
 
   const loadSubscription = async () => {
+    if (!isSignedIn) {
+      setSubscription({
+        plan: "free",
+        max_users: 1,
+        monthly_limit: 5,
+      });
+      return;
+    }
+
     try {
       const res = await fetch("/api/subscription");
       const data = await res.json();
@@ -32,10 +54,45 @@ export default function PricingPage() {
   };
 
   useEffect(() => {
+    if (!isLoaded) return;
     loadSubscription();
-  }, []);
+  }, [isLoaded, isSignedIn]);
+
+  // If a signed-out user clicked "Sign in to buy", we bring them back with ?buy=pro|agency.
+  // Once they're signed in, we immediately kick off the PayFast redirect.
+  useEffect(() => {
+    if (!isLoaded) return;
+    if (!isSignedIn) return;
+    if (!pendingBuyPlan) return;
+    if (autoStarted) return;
+
+    setAutoStarted(true);
+    setMessage("");
+    setLoadingPlan(pendingBuyPlan);
+
+    // Redirect to a server route that returns an auto-submitting PayFast form.
+    window.location.href = `/api/payfast?plan=${pendingBuyPlan}`;
+  }, [isLoaded, isSignedIn, pendingBuyPlan, autoStarted]);
 
   const changePlan = async (plan: "free" | "pro" | "agency") => {
+    // In production we do NOT manually flip plans. Plans are activated by PayFast ITN.
+    if (!showTestSwitches) {
+      if (plan === "free") {
+        window.location.href = "/dashboard";
+        return;
+      }
+
+      setMessage(
+        "Paid plans activate after a successful PayFast payment. Use the Pay with PayFast button."
+      );
+      return;
+    }
+
+    if (!isSignedIn) {
+      setMessage("Sign in first if you want to test-switch plans.");
+      return;
+    }
+
     setMessage("");
     setLoadingPlan(plan);
 
@@ -64,46 +121,26 @@ export default function PricingPage() {
     setLoadingPlan("");
   };
 
-  const startPayment = async (plan: "pro" | "agency") => {
+  const startPayment = (plan: "pro" | "agency") => {
+    if (!isSignedIn) {
+      setMessage("Sign in first if you want to buy Pro or Agency.");
+      return;
+    }
+
     setMessage("");
     setLoadingPlan(plan);
 
-    try {
-      const res = await fetch("/api/payfast", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          plan,
-          email: user?.primaryEmailAddress?.emailAddress || "",
-          name: user?.firstName || "Customer",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.url) {
-        window.location.href = data.url;
-        return;
-      }
-
-      setMessage(data.error || "Failed to start payment.");
-    } catch (error) {
-      console.error("Failed to start payment:", error);
-      setMessage("Failed to start payment.");
-    }
-
-    setLoadingPlan("");
+    // This is a top-level navigation to a server route that returns an auto-submitting PayFast form.
+    // It's more reliable than async fetch + form.submit (some browsers drop user-activation after await).
+    window.location.href = `/api/payfast?plan=${plan}`;
   };
 
   return (
     <main className="page-shell">
       <div className="page-container">
-        <AppHeader showUserButton={false} />
+        <AppHeader />
 
         <div style={{ marginTop: 40, display: "grid", gap: 22 }}>
-          {/* HERO */}
           <section className="card" style={{ marginBottom: 0 }}>
             <div
               style={{
@@ -138,8 +175,8 @@ export default function PricingPage() {
                     marginBottom: 18,
                   }}
                 >
-                  Start free, upgrade when you need more monthly review requests,
-                  and move to Agency when multiple workers need one shared workspace.
+                  Use the free demo without signing in. Sign in only when you want
+                  to save your data or pay for Pro or Agency.
                 </p>
 
                 <div className="button-row">
@@ -151,6 +188,14 @@ export default function PricingPage() {
                     Open Dashboard
                   </a>
                 </div>
+
+                {!isSignedIn && (
+                  <div className="button-row" style={{ marginTop: 14 }}>
+                    <SignInButton mode="modal" fallbackRedirectUrl="/pricing">
+                      <button className="btn-outline">Sign in to upgrade</button>
+                    </SignInButton>
+                  </div>
+                )}
 
                 {message && (
                   <p style={{ marginTop: 16, fontWeight: 700 }}>{message}</p>
@@ -195,13 +240,16 @@ export default function PricingPage() {
 
                 <div className="info-list">
                   <div className="muted-text info-line">
-                    • Free = testing the app
+                    • Free demo works without login
                   </div>
                   <div className="muted-text info-line">
-                    • Pro = best for one operator
+                    • Sign in is required for paid upgrades
                   </div>
                   <div className="muted-text info-line">
-                    • Agency = best for teams
+                    • Pro is best for one operator
+                  </div>
+                  <div className="muted-text info-line">
+                    • Agency is best for teams
                   </div>
                   <div className="muted-text info-line">
                     • PayFast checkout is charged in ZAR
@@ -211,7 +259,6 @@ export default function PricingPage() {
             </div>
           </section>
 
-          {/* PLAN CARDS */}
           <section
             id="plans"
             className="price-grid pricing-plan-grid"
@@ -236,18 +283,18 @@ export default function PricingPage() {
                 <li>5 review requests per month</li>
                 <li>1 user</li>
                 <li>Dashboard access</li>
-                <li>Calendar access</li>
-                <li>Customers access</li>
-                <li>Basic settings</li>
+                <li>Basic workflow demo</li>
+                <li>Try before paying</li>
+                <li>No login needed for demo</li>
               </ul>
 
               <div className="button-row" style={{ marginTop: 18 }}>
                 <button
                   className="btn-outline"
-                  onClick={() => changePlan("free")}
+                  onClick={() => (window.location.href = "/dashboard")}
                   disabled={loadingPlan !== ""}
                 >
-                  {loadingPlan === "free" ? "Loading..." : "Use Free"}
+                  {loadingPlan === "free" ? "Loading..." : "Use Free Demo"}
                 </button>
               </div>
             </div>
@@ -273,21 +320,37 @@ export default function PricingPage() {
               </ul>
 
               <div className="button-row" style={{ marginTop: 18 }}>
-                <button
-                  className="btn"
-                  onClick={() => startPayment("pro")}
-                  disabled={loadingPlan !== ""}
-                >
-                  {loadingPlan === "pro" ? "Loading..." : "Pay with PayFast"}
-                </button>
+                {isSignedIn ? (
+                  <button
+                    className="btn"
+                    onClick={() => startPayment("pro")}
+                    disabled={loadingPlan !== ""}
+                  >
+                    {loadingPlan === "pro" ? "Loading..." : "Pay with PayFast"}
+                  </button>
+                ) : (
+                  <SignInButton
+                    mode="modal"
+                    forceRedirectUrl="/pricing?buy=pro"
+                    signUpForceRedirectUrl="/pricing?buy=pro"
+                    fallbackRedirectUrl="/pricing"
+                    signUpFallbackRedirectUrl="/pricing"
+                  >
+                    <button className="btn" disabled={loadingPlan !== ""}>
+                      Sign in to buy
+                    </button>
+                  </SignInButton>
+                )}
 
-                <button
-                  className="btn-outline"
-                  onClick={() => changePlan("pro")}
-                  disabled={loadingPlan !== ""}
-                >
-                  Test Switch Pro
-                </button>
+                {showTestSwitches && (
+                  <button
+                    className="btn-outline"
+                    onClick={() => changePlan("pro")}
+                    disabled={loadingPlan !== ""}
+                  >
+                    Test Switch Pro
+                  </button>
+                )}
               </div>
             </div>
 
@@ -312,26 +375,41 @@ export default function PricingPage() {
               </ul>
 
               <div className="button-row" style={{ marginTop: 18 }}>
-                <button
-                  className="btn"
-                  onClick={() => startPayment("agency")}
-                  disabled={loadingPlan !== ""}
-                >
-                  {loadingPlan === "agency" ? "Loading..." : "Pay with PayFast"}
-                </button>
+                {isSignedIn ? (
+                  <button
+                    className="btn"
+                    onClick={() => startPayment("agency")}
+                    disabled={loadingPlan !== ""}
+                  >
+                    {loadingPlan === "agency" ? "Loading..." : "Pay with PayFast"}
+                  </button>
+                ) : (
+                  <SignInButton
+                    mode="modal"
+                    forceRedirectUrl="/pricing?buy=agency"
+                    signUpForceRedirectUrl="/pricing?buy=agency"
+                    fallbackRedirectUrl="/pricing"
+                    signUpFallbackRedirectUrl="/pricing"
+                  >
+                    <button className="btn" disabled={loadingPlan !== ""}>
+                      Sign in to buy
+                    </button>
+                  </SignInButton>
+                )}
 
-                <button
-                  className="btn-outline"
-                  onClick={() => changePlan("agency")}
-                  disabled={loadingPlan !== ""}
-                >
-                  Test Switch Agency
-                </button>
+                {showTestSwitches && (
+                  <button
+                    className="btn-outline"
+                    onClick={() => changePlan("agency")}
+                    disabled={loadingPlan !== ""}
+                  >
+                    Test Switch Agency
+                  </button>
+                )}
               </div>
             </div>
           </section>
 
-          {/* VALUE SECTION */}
           <section
             style={{
               display: "grid",
@@ -379,7 +457,6 @@ export default function PricingPage() {
             </div>
           </section>
 
-          {/* COMPARISON */}
           <section className="card" style={{ marginBottom: 0, padding: 0, overflow: "hidden" }}>
             <div
               style={{
@@ -400,8 +477,8 @@ export default function PricingPage() {
                 ["Review requests / month", "5", "300", "10,000"],
                 ["Users", "1", "1", "Unlimited"],
                 ["Dashboard", "Yes", "Yes", "Yes"],
-                ["Calendar", "Yes", "Yes", "Yes"],
-                ["Customers", "Yes", "Yes", "Yes"],
+                ["Calendar", "Demo only", "Yes", "Yes"],
+                ["Customers", "Demo only", "Yes", "Yes"],
                 ["CSV export", "No", "Yes", "Yes"],
                 ["Shared workspace", "No", "No", "Yes"],
                 ["Team management", "No", "No", "Yes"],
@@ -428,7 +505,6 @@ export default function PricingPage() {
             </div>
           </section>
 
-          {/* FAQ */}
           <section
             style={{
               display: "grid",
@@ -444,13 +520,13 @@ export default function PricingPage() {
                 <div className="muted-text info-line">
                   <strong>Why does the page show AUD but checkout uses ZAR?</strong>
                   <br />
-                  The pricing is shown in approximate AUD for Australian customers, but PayFast charges in ZAR.
+                  Pricing is shown in approximate AUD for Australian customers, but PayFast charges in ZAR.
                 </div>
 
                 <div className="muted-text info-line">
                   <strong>Can I test the app before paying?</strong>
                   <br />
-                  Yes. The Free plan is there so you can test the basic workflow first.
+                  Yes. The Free demo is there so you can test the workflow first without signing in.
                 </div>
 
                 <div className="muted-text info-line">
@@ -465,8 +541,8 @@ export default function PricingPage() {
               <h2 className="section-title">Simple next step</h2>
 
               <p className="muted-text" style={{ marginBottom: 16, lineHeight: 1.8 }}>
-                Start with Free if you want to test. Choose Pro if you run the app yourself.
-                Choose Agency if your business needs multiple users under one system.
+                Test the workflow free on the dashboard first. Sign in when you want to
+                save data or pay for Pro or Agency.
               </p>
 
               <div className="button-row">

@@ -3,12 +3,13 @@
 import AppHeader from "@/components/AppHeader";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { SignInButton, SignUpButton, useAuth } from "@clerk/nextjs";
 
 export default function DashboardPage() {
+  const { isLoaded, isSignedIn } = useAuth();
+
   const [stats, setStats] = useState<any>({});
   const [usage, setUsage] = useState<any>({});
-  const [settings, setSettings] = useState<any>({});
-  const [recentReviews, setRecentReviews] = useState<any[]>([]);
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState("");
@@ -19,14 +20,17 @@ export default function DashboardPage() {
 
   const [generatedMessage, setGeneratedMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
   const [copied, setCopied] = useState(false);
+  const [message, setMessage] = useState("");
+  const [demoUsed, setDemoUsed] = useState(0);
 
-  const totalJobs = Number(stats.totalJobs ?? 0);
-  const jobsToday = Number(stats.jobsToday ?? 0);
-  const currentPlan = String(usage.plan ?? stats.plan ?? "free");
-  const messagesUsed = Number(usage.used ?? 0);
-  const monthlyLimit = Number(usage.limit ?? 0);
+  const totalJobs = isSignedIn ? Number(stats.totalJobs ?? 0) : 0;
+  const jobsToday = isSignedIn ? Number(stats.jobsToday ?? 0) : 0;
+  const currentPlan = isSignedIn
+    ? String(usage.plan ?? stats.plan ?? "free")
+    : "free demo";
+  const messagesUsed = isSignedIn ? Number(usage.used ?? 0) : demoUsed;
+  const monthlyLimit = isSignedIn ? Number(usage.limit ?? 5) : 5;
 
   const usagePercent = useMemo(() => {
     if (!monthlyLimit) return 0;
@@ -34,45 +38,69 @@ export default function DashboardPage() {
   }, [messagesUsed, monthlyLimit]);
 
   const load = async () => {
-    const [s, u, r] = await Promise.all([
-      fetch("/api/stats"),
-      fetch("/api/usage"),
-      fetch("/api/reviews"),
-    ]);
+    if (!isSignedIn) return;
+
+    const [s, u] = await Promise.all([fetch("/api/stats"), fetch("/api/usage")]);
 
     setStats(await s.json());
     setUsage(await u.json());
-
-    const data = await r.json();
-    setRecentReviews(data.reviews || []);
   };
 
   useEffect(() => {
-    load();
-  }, []);
+    if (!isLoaded) return;
+    if (isSignedIn) {
+      load();
+    }
+  }, [isLoaded, isSignedIn]);
 
   const generate = async () => {
-    setSubmitting(true);
+    setMessage("");
     setCopied(false);
 
-    const res = await fetch("/api/review", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        customer_name: customerName,
-        phone: customerPhone,
-        address: customerAddress,
-        job_datetime: jobDateTime,
-        notes: jobNotes,
-        cost: repairCost,
-      }),
-    });
+    if (!jobNotes.trim()) {
+      setMessage("Please add some job notes first.");
+      return;
+    }
 
-    const data = await res.json();
+    if (!isSignedIn && demoUsed >= 5) {
+      setMessage("Demo limit reached. Sign in to keep using the free plan and save your work.");
+      return;
+    }
 
-    if (data.output_text) {
-      setGeneratedMessage(data.output_text);
-      load();
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/review", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          customer_name: customerName,
+          phone: customerPhone,
+          address: customerAddress,
+          job_datetime: jobDateTime,
+          notes: jobNotes,
+          cost: repairCost,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.output_text) {
+        setGeneratedMessage(data.output_text);
+
+        if (data.demo_mode) {
+          setDemoUsed((prev: number) => Math.min(prev + 1, 5));
+          setMessage("Demo message generated. Sign in if you want to save jobs and customers.");
+        } else {
+          await load();
+          setMessage("Message generated and saved.");
+        }
+      } else {
+        setMessage(data.error || "Could not generate the message.");
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage("Something went wrong.");
     }
 
     setSubmitting(false);
@@ -91,23 +119,17 @@ export default function DashboardPage() {
 
   const whatsapp = () => {
     if (!generatedMessage) return;
-    window.open(
-      `https://wa.me/?text=${encodeURIComponent(generatedMessage)}`
-    );
+    window.open(`https://wa.me/?text=${encodeURIComponent(generatedMessage)}`);
   };
 
   const sms = () => {
     if (!generatedMessage) return;
-    window.location.href = `sms:?&body=${encodeURIComponent(
-      generatedMessage
-    )}`;
+    window.location.href = `sms:?&body=${encodeURIComponent(generatedMessage)}`;
   };
 
   const email = () => {
     if (!generatedMessage) return;
-    window.location.href = `mailto:?body=${encodeURIComponent(
-      generatedMessage
-    )}`;
+    window.location.href = `mailto:?body=${encodeURIComponent(generatedMessage)}`;
   };
 
   return (
@@ -116,7 +138,36 @@ export default function DashboardPage() {
 
       <div className="page-container" style={{ marginTop: 52 }}>
         <div style={{ display: "grid", gap: 28 }}>
-          {/* STATS */}
+          {!isSignedIn && (
+            <section className="card" style={{ marginBottom: 0, padding: 28 }}>
+              <span className="badge">Free demo mode</span>
+
+              <h2 style={{ marginTop: 14, marginBottom: 10 }}>
+                Try the workflow without signing in.
+              </h2>
+
+              <p className="muted-text" style={{ lineHeight: 1.8, maxWidth: 860 }}>
+                You can generate review messages here without an account. In demo mode,
+                jobs and customers are not saved. Sign in when you want to save records,
+                use customers and calendar, or buy Pro or Agency.
+              </p>
+
+              <div className="button-row" style={{ marginTop: 18 }}>
+                <SignInButton mode="modal" fallbackRedirectUrl="/dashboard">
+                  <button className="btn">Sign In to Save Work</button>
+                </SignInButton>
+
+                <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+                  <button className="btn-outline">Create Free Account</button>
+                </SignUpButton>
+
+                <Link href="/pricing" className="btn-outline">
+                  View Pricing
+                </Link>
+              </div>
+            </section>
+          )}
+
           <section
             className="dashboard-stats-grid"
             style={{
@@ -149,7 +200,6 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* USAGE */}
           <section className="card" style={{ marginBottom: 0, padding: 28 }}>
             <div
               style={{
@@ -193,7 +243,6 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          {/* MAIN */}
           <section
             className="dashboard-main-grid"
             style={{
@@ -204,7 +253,6 @@ export default function DashboardPage() {
               marginTop: 4,
             }}
           >
-            {/* FORM */}
             <div className="card" style={{ marginBottom: 0, padding: 32 }}>
               <h2 style={{ marginBottom: 22 }}>Create Review</h2>
 
@@ -251,10 +299,13 @@ export default function DashboardPage() {
                     {submitting ? "Generating..." : "Generate"}
                   </button>
                 </div>
+
+                {message && (
+                  <p style={{ marginTop: 8, fontWeight: 700 }}>{message}</p>
+                )}
               </div>
             </div>
 
-            {/* OUTPUT */}
             <div className="card" style={{ marginBottom: 0, padding: 32 }}>
               <h2 style={{ marginBottom: 22 }}>Generated Message</h2>
 

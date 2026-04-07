@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 function escapeCsv(value: unknown) {
@@ -19,7 +19,7 @@ export async function GET() {
 
   const workspaceId = await getWorkspaceId(userId);
 
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from("jobs")
     .select("*")
     .eq("workspace_id", workspaceId)

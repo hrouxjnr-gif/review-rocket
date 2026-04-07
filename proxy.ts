@@ -1,9 +1,28 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)"]);
+const isProtectedPageRoute = createRouteMatcher([
+  "/customers(.*)",
+  "/calendar(.*)",
+  "/team(.*)",
+  "/settings(.*)",
+]);
 
 export default clerkMiddleware(async (auth, req) => {
-  if (isProtectedRoute(req)) {
+  const pathname = req.nextUrl.pathname;
+
+  const isProtectedApiRoute =
+    pathname.startsWith("/api/subscription") ||
+    pathname.startsWith("/api/stats") ||
+    pathname.startsWith("/api/usage") ||
+    pathname.startsWith("/api/reviews") ||
+    pathname.startsWith("/api/jobs") ||
+    pathname.startsWith("/api/settings") ||
+    pathname.startsWith("/api/team") ||
+    pathname.startsWith("/api/export") ||
+    (pathname.startsWith("/api/payfast") &&
+      !pathname.startsWith("/api/payfast/notify"));
+
+  if (isProtectedPageRoute(req) || isProtectedApiRoute) {
     await auth.protect();
   }
 });

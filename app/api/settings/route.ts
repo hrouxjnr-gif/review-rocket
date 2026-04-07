@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import { getWorkspaceId } from "@/lib/workspace";
 
 function emptySettings() {
   return {
@@ -24,12 +25,15 @@ export async function GET() {
       );
     }
 
-    const { data, error } = await supabase
+    const workspaceId = await getWorkspaceId(userId);
+    const settingsOwnerId = workspaceId || userId;
+
+    const { data, error } = await supabaseAdmin
       .from("settings")
       .select(
         "business_name, review_link, currency, business_email, business_phone, business_address"
       )
-      .eq("user_id", userId)
+      .eq("user_id", settingsOwnerId)
       .maybeSingle();
 
     if (error) {
@@ -64,10 +68,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const workspaceId = await getWorkspaceId(userId);
+    const settingsOwnerId = workspaceId || userId;
+
     const body = await req.json();
 
     const payload = {
-      user_id: userId,
+      user_id: settingsOwnerId,
       business_name: String(body.businessName || "").trim(),
       review_link: String(body.reviewLink || "").trim(),
       currency: String(body.currency || "R").trim(),
@@ -76,7 +83,7 @@ export async function POST(req: NextRequest) {
       business_address: String(body.businessAddress || "").trim(),
     };
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("settings")
       .upsert(payload, { onConflict: "user_id" })
       .select(

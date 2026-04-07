@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { PLAN_CONFIG, normalizePlan } from "@/lib/plans";
 import { getWorkspaceId } from "@/lib/workspace";
 
@@ -14,7 +14,7 @@ export async function GET() {
 
     const workspaceId = await getWorkspaceId(userId);
 
-    const { data: subscription } = await supabase
+    const { data: subscription } = await supabaseAdmin
       .from("subscriptions")
       .select("*")
       .eq("user_id", workspaceId)
@@ -26,7 +26,7 @@ export async function GET() {
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
 
-    const { count, error } = await supabase
+    const { count, error } = await supabaseAdmin
       .from("reviews")
       .select("*", { count: "exact", head: true })
       .eq("workspace_id", workspaceId)

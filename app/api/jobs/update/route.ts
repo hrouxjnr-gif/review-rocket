@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 export async function POST(req: Request) {
@@ -27,7 +27,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing job ID" }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("jobs")
       .update({
         customer_name,

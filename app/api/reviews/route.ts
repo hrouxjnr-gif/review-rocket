@@ -1,6 +1,6 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 export async function GET() {
@@ -13,7 +13,7 @@ export async function GET() {
 
     const workspaceId = await getWorkspaceId(userId);
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("reviews")
       .select("*")
       .eq("workspace_id", workspaceId)

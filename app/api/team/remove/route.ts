@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
+import { getWorkspaceId } from "@/lib/workspace";
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +11,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const ownerUserId = await getWorkspaceId(userId);
+
+    if (ownerUserId !== userId) {
+      return NextResponse.json(
+        { error: "Only the workspace owner can remove team members." },
+        { status: 403 }
+      );
+    }
+
     const body = await req.json();
     const memberUserId = body.memberUserId?.trim();
 
@@ -17,10 +27,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing member ID" }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from("team_members")
       .delete()
-      .eq("owner_user_id", userId)
+      .eq("owner_user_id", ownerUserId)
       .eq("member_user_id", memberUserId);
 
     if (error) {

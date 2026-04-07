@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 function buildReviewMessage(params: {
@@ -27,7 +27,7 @@ export async function POST() {
 
     const workspaceId = await getWorkspaceId(userId);
 
-    const { data: jobs, error: jobsError } = await supabase
+    const { data: jobs, error: jobsError } = await supabaseAdmin
       .from("jobs")
       .select("id, customer_name, job_notes, repair_cost, generated_message, workspace_id")
       .eq("workspace_id", workspaceId);
@@ -57,7 +57,7 @@ export async function POST() {
         repairCost,
       });
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await supabaseAdmin
         .from("jobs")
         .update({
           generated_message: generatedMessage,

@@ -1,7 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { PLAN_CONFIG, normalizePlan } from "@/lib/plans";
+import { getWorkspaceId } from "@/lib/workspace";
+
+const allowTestPlanSwitches =
+  process.env.NEXT_PUBLIC_ALLOW_TEST_PLAN_SWITCHES === "true";
 
 export async function GET() {
   try {
@@ -14,10 +18,13 @@ export async function GET() {
       );
     }
 
-    const { data, error } = await supabase
+    const workspaceId = await getWorkspaceId(userId);
+    const subscriptionOwnerId = workspaceId || userId;
+
+    const { data, error } = await supabaseAdmin
       .from("subscriptions")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", subscriptionOwnerId)
       .maybeSingle();
 
     if (error) {
@@ -30,10 +37,10 @@ export async function GET() {
     if (!data) {
       const config = PLAN_CONFIG.free;
 
-      const { data: created, error: insertError } = await supabase
+      const { data: created, error: insertError } = await supabaseAdmin
         .from("subscriptions")
         .insert({
-          user_id: userId,
+          user_id: subscriptionOwnerId,
           plan: "free",
           max_users: config.maxUsers,
           monthly_limit: config.monthlyLimit,
@@ -80,15 +87,25 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!allowTestPlanSwitches) {
+      return NextResponse.json(
+        { error: "Manual plan switching is disabled in this environment." },
+        { status: 403 }
+      );
+    }
+
+    const workspaceId = await getWorkspaceId(userId);
+    const subscriptionOwnerId = workspaceId || userId;
+
     const body = await req.json();
     const plan = normalizePlan(body.plan);
     const config = PLAN_CONFIG[plan];
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from("subscriptions")
       .upsert(
         {
-          user_id: userId,
+          user_id: subscriptionOwnerId,
           plan,
           max_users: config.maxUsers,
           monthly_limit: config.monthlyLimit,

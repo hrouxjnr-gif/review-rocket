@@ -2,6 +2,7 @@
 
 import AppHeader from "@/components/AppHeader";
 import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@clerk/nextjs";
 
 type InvoiceItem = {
   id: string;
@@ -82,6 +83,7 @@ const defaultBusinessDefaults: SavedBusinessDefaults = {
 };
 
 export default function InvoicePage() {
+  const { isLoaded, isSignedIn } = useAuth();
   const [hasBooted, setHasBooted] = useState(false);
 
   const [docType, setDocType] = useState<"Invoice" | "Quote">("Invoice");
@@ -141,6 +143,8 @@ export default function InvoicePage() {
   }, [subtotal, taxAmount, discount]);
 
   useEffect(() => {
+    if (!isLoaded) return;
+
     const boot = async () => {
       let draftLoaded = false;
 
@@ -185,31 +189,41 @@ export default function InvoicePage() {
         console.error("Draft load failed:", error);
       }
 
-      try {
-        const res = await fetch("/api/settings");
-        const data = await res.json();
+      if (isSignedIn) {
+        try {
+          const res = await fetch("/api/settings", {
+            method: "GET",
+            cache: "no-store",
+          });
 
-        if (data.settings) {
-          const loadedDefaults: SavedBusinessDefaults = {
-            businessName: data.settings.business_name || "",
-            businessEmail: data.settings.business_email || "",
-            businessPhone: data.settings.business_phone || "",
-            businessAddress: data.settings.business_address || "",
-            currency: data.settings.currency || "R",
-          };
+          if (res.ok) {
+            const data = await res.json();
 
-          setSavedDefaults(loadedDefaults);
+            if (data.settings) {
+              const loadedDefaults: SavedBusinessDefaults = {
+                businessName: data.settings.business_name || "",
+                businessEmail: data.settings.business_email || "",
+                businessPhone: data.settings.business_phone || "",
+                businessAddress: data.settings.business_address || "",
+                currency: data.settings.currency || "R",
+              };
 
-          if (!draftLoaded) {
-            setBusinessName(loadedDefaults.businessName);
-            setBusinessEmail(loadedDefaults.businessEmail);
-            setBusinessPhone(loadedDefaults.businessPhone);
-            setBusinessAddress(loadedDefaults.businessAddress);
-            setCurrency(loadedDefaults.currency);
+              setSavedDefaults(loadedDefaults);
+
+              if (!draftLoaded) {
+                setBusinessName(loadedDefaults.businessName);
+                setBusinessEmail(loadedDefaults.businessEmail);
+                setBusinessPhone(loadedDefaults.businessPhone);
+                setBusinessAddress(loadedDefaults.businessAddress);
+                setCurrency(loadedDefaults.currency);
+              }
+            }
+          } else if (res.status !== 401) {
+            console.error("Settings load failed with status:", res.status);
           }
+        } catch (error) {
+          console.error("Settings load failed:", error);
         }
-      } catch (error) {
-        console.error("Settings load failed:", error);
       }
 
       if (!draftLoaded) {
@@ -222,7 +236,7 @@ export default function InvoicePage() {
     };
 
     boot();
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   useEffect(() => {
     if (!hasBooted) return;

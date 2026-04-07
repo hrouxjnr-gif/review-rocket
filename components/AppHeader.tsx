@@ -4,7 +4,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
+import {
+  SignInButton,
+  SignUpButton,
+  UserButton,
+  useAuth,
+} from "@clerk/nextjs";
 
 type AppHeaderProps = {
   showUserButton?: boolean;
@@ -14,6 +19,7 @@ type MenuItem = {
   href: string;
   label: string;
   description: string;
+  protected?: boolean;
 };
 
 type MenuSection = {
@@ -23,27 +29,42 @@ type MenuSection = {
 
 const menuSections: MenuSection[] = [
   {
+    title: "Navigation",
+    items: [
+      {
+        href: "/",
+        label: "Home",
+        description: "Back to the landing page and overview",
+        protected: false,
+      },
+    ],
+  },
+  {
     title: "Workspace",
     items: [
       {
         href: "/dashboard",
         label: "Dashboard",
-        description: "Create reviews and manage daily work",
+        description: "Try the review workflow and manage daily work",
+        protected: false,
       },
       {
         href: "/customers",
         label: "Customers",
         description: "Search, edit, and reuse customer records",
+        protected: true,
       },
       {
         href: "/calendar",
         label: "Calendar",
         description: "Filter jobs by date and scan the day fast",
+        protected: true,
       },
       {
         href: "/invoice",
         label: "Invoice Tool",
         description: "Create invoices and quotes in one place",
+        protected: false,
       },
     ],
   },
@@ -54,16 +75,19 @@ const menuSections: MenuSection[] = [
         href: "/pricing",
         label: "Pricing",
         description: "Compare Free, Pro, and Agency",
+        protected: false,
       },
       {
         href: "/team",
         label: "Team",
         description: "Add staff and manage seats",
+        protected: true,
       },
       {
         href: "/settings",
         label: "Settings",
         description: "Save business details and defaults",
+        protected: true,
       },
     ],
   },
@@ -74,11 +98,31 @@ const menuSections: MenuSection[] = [
         href: "/how-it-works",
         label: "How It Works",
         description: "See the app flow step by step",
+        protected: false,
       },
       {
         href: "/feedback",
         label: "Contact / Support",
         description: "Get help or send feedback",
+        protected: false,
+      },
+      {
+        href: "/privacy",
+        label: "Privacy Policy",
+        description: "How we handle your data",
+        protected: false,
+      },
+      {
+        href: "/terms",
+        label: "Terms of Service",
+        description: "Usage rules and service terms",
+        protected: false,
+      },
+      {
+        href: "/refund",
+        label: "Refund Policy",
+        description: "Refunds and cancellations",
+        protected: false,
       },
     ],
   },
@@ -88,6 +132,8 @@ export default function AppHeader({
   showUserButton = true,
 }: AppHeaderProps) {
   const pathname = usePathname();
+  const { isLoaded, isSignedIn } = useAuth();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const menuWrapRef = useRef<HTMLDivElement | null>(null);
 
@@ -131,34 +177,6 @@ export default function AppHeader({
     };
   }, []);
 
-  const homeButtonStyle: React.CSSProperties = {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: "46px",
-    padding: "0 18px",
-    borderRadius: "14px",
-    textDecoration: "none",
-    fontWeight: 800,
-    fontSize: "16px",
-    lineHeight: 1,
-    whiteSpace: "nowrap",
-    border:
-      pathname === "/"
-        ? "1px solid rgba(255,255,255,0.96)"
-        : "1px solid rgba(255,255,255,0.18)",
-    background:
-      pathname === "/"
-        ? "rgba(255,255,255,0.96)"
-        : "rgba(255,255,255,0.07)",
-    color: pathname === "/" ? "#111827" : "#f8fafc",
-    boxShadow:
-      pathname === "/"
-        ? "0 10px 24px rgba(0,0,0,0.16)"
-        : "0 8px 20px rgba(15,23,42,0.18), inset 0 1px 0 rgba(255,255,255,0.06)",
-    flexShrink: 0,
-  };
-
   return (
     <>
       <header className="site-header">
@@ -172,10 +190,6 @@ export default function AppHeader({
               priority
               className="site-logo__image"
             />
-          </Link>
-
-          <Link href="/" style={homeButtonStyle}>
-            Home
           </Link>
         </div>
 
@@ -213,7 +227,8 @@ export default function AppHeader({
                   <div className="site-menu-badge">Quick navigation</div>
                   <h3 className="site-menu-title">Move faster</h3>
                   <p className="site-menu-subtitle">
-                    Open the page you need without cluttering the header.
+                    Use the free demo without signing in. Sign in only when you
+                    want to save data, manage customers, or upgrade.
                   </p>
                 </div>
 
@@ -232,18 +247,59 @@ export default function AppHeader({
                       <div className="site-menu-account-card__label">
                         Account
                       </div>
-                      <div className="site-menu-account-card__button">
-                        <UserButton
-                          appearance={{
-                            elements: {
-                              userButtonAvatarBox: {
-                                width: "40px",
-                                height: "40px",
-                              },
-                            },
-                          }}
-                        />
-                      </div>
+
+                      {!isLoaded ? (
+                        <div className="site-menu-account-signedout">
+                          <p className="site-menu-account-helper">
+                            Loading account...
+                          </p>
+                        </div>
+                      ) : isSignedIn ? (
+                        <div className="site-menu-account-signedin">
+                          <span className="site-menu-account-helper">
+                            Signed in
+                          </span>
+
+                          <div className="site-menu-account-button">
+                            <UserButton
+                              appearance={{
+                                elements: {
+                                  userButtonAvatarBox: {
+                                    width: "40px",
+                                    height: "40px",
+                                  },
+                                },
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="site-menu-account-signedout">
+                          <p className="site-menu-account-helper">
+                            Save jobs, keep customers, and upgrade later.
+                          </p>
+
+                          <div className="site-account-actions">
+                            <SignInButton
+                              mode="modal"
+                              fallbackRedirectUrl="/dashboard"
+                            >
+                              <button className="site-account-btn site-account-btn--primary">
+                                Sign in
+                              </button>
+                            </SignInButton>
+
+                            <SignUpButton
+                              mode="modal"
+                              fallbackRedirectUrl="/dashboard"
+                            >
+                              <button className="site-account-btn site-account-btn--secondary">
+                                Create account
+                              </button>
+                            </SignUpButton>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -261,6 +317,7 @@ export default function AppHeader({
                         <Link
                           key={item.href}
                           href={item.href}
+                          prefetch={false}
                           className={`site-menu-link ${
                             isRouteActive(item.href)
                               ? "site-menu-link--active"
@@ -277,6 +334,12 @@ export default function AppHeader({
                           <p className="site-menu-link__description">
                             {item.description}
                           </p>
+
+                          {item.protected && (
+                            <span className="site-menu-link__badge">
+                              Sign in required
+                            </span>
+                          )}
                         </Link>
                       ))}
                     </div>
@@ -317,6 +380,14 @@ export default function AppHeader({
           flex: 1 1 auto;
         }
 
+        .site-header__right {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          flex-shrink: 0;
+          position: relative;
+        }
+
         .site-logo {
           display: inline-flex;
           align-items: center;
@@ -331,12 +402,42 @@ export default function AppHeader({
           display: block;
         }
 
-        .site-header__right {
-          display: flex;
+        .site-home-button {
+          display: inline-flex;
           align-items: center;
-          gap: 10px;
-          flex-shrink: 0;
-          position: relative;
+          justify-content: center;
+          min-height: 46px;
+          padding: 0 18px;
+          border-radius: 14px;
+          text-decoration: none;
+          font-weight: 800;
+          font-size: 16px;
+          line-height: 1;
+          white-space: nowrap;
+          color: #f8fafc;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          box-shadow:
+            0 8px 20px rgba(15, 23, 42, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.06);
+          transition:
+            transform 0.18s ease,
+            background 0.18s ease,
+            border-color 0.18s ease,
+            box-shadow 0.18s ease,
+            color 0.18s ease;
+        }
+
+        .site-home-button:hover {
+          transform: translateY(-1px);
+          background: rgba(255, 255, 255, 0.12);
+          border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .site-home-button--active {
+          background: rgba(255, 255, 255, 0.96);
+          color: #111827;
+          border-color: rgba(255, 255, 255, 0.96);
         }
 
         .site-menu-wrap {
@@ -360,24 +461,18 @@ export default function AppHeader({
           cursor: pointer;
           font-weight: 800;
           font-size: 16px;
+          box-shadow:
+            0 8px 18px rgba(15, 23, 42, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08);
           transition:
             transform 0.18s ease,
             box-shadow 0.18s ease,
             border-color 0.18s ease,
             background 0.18s ease;
-          box-shadow:
-            0 8px 18px rgba(15, 23, 42, 0.18),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08);
         }
 
         .site-menu-button:hover {
           transform: translateY(-1px);
-          border-color: rgba(255, 255, 255, 0.28);
-          background: linear-gradient(
-            135deg,
-            rgba(223, 246, 255, 0.22) 0%,
-            rgba(191, 219, 254, 0.18) 100%
-          );
         }
 
         .site-menu-button--open {
@@ -429,7 +524,7 @@ export default function AppHeader({
           position: absolute;
           top: calc(100% + 12px);
           right: 0;
-          width: min(430px, calc(100vw - 24px));
+          width: min(440px, calc(100vw - 24px));
           max-height: min(78vh, 760px);
           overflow-y: auto;
           padding: 14px;
@@ -503,20 +598,18 @@ export default function AppHeader({
           font-size: 14px;
         }
 
-        .site-menu-active-card {
+        .site-menu-active-card,
+        .site-menu-account-card {
           border-radius: 16px;
           padding: 12px;
-          background: linear-gradient(
-            135deg,
-            rgba(34, 211, 238, 0.12) 0%,
-            rgba(59, 130, 246, 0.12) 100%
-          );
+          background: rgba(255, 255, 255, 0.05);
           border: 1px solid rgba(255, 255, 255, 0.08);
           display: grid;
-          gap: 6px;
+          gap: 8px;
         }
 
-        .site-menu-active-card__label {
+        .site-menu-active-card__label,
+        .site-menu-account-card__label {
           font-size: 12px;
           color: rgba(255, 255, 255, 0.68);
         }
@@ -527,27 +620,48 @@ export default function AppHeader({
           line-height: 1.1;
         }
 
-        .site-menu-account-card {
+        .site-menu-account-signedin {
           display: flex;
           align-items: center;
           justify-content: space-between;
           gap: 12px;
-          border-radius: 16px;
-          padding: 12px;
-          background: rgba(255, 255, 255, 0.05);
-          border: 1px solid rgba(255, 255, 255, 0.08);
         }
 
-        .site-menu-account-card__label {
+        .site-menu-account-signedout {
+          display: grid;
+          gap: 10px;
+        }
+
+        .site-menu-account-helper {
           font-size: 13px;
-          font-weight: 800;
+          line-height: 1.5;
           color: rgba(255, 255, 255, 0.82);
         }
 
-        .site-menu-account-card__button {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
+        .site-account-actions {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 10px;
+        }
+
+        .site-account-btn {
+          min-height: 42px;
+          width: 100%;
+          border-radius: 12px;
+          font-weight: 800;
+          font-size: 14px;
+          cursor: pointer;
+          border: 1px solid rgba(255, 255, 255, 0.14);
+        }
+
+        .site-account-btn--primary {
+          background: rgba(255, 255, 255, 0.96);
+          color: #111827;
+        }
+
+        .site-account-btn--secondary {
+          background: rgba(255, 255, 255, 0.08);
+          color: #f8fafc;
         }
 
         .site-menu-sections {
@@ -594,9 +708,6 @@ export default function AppHeader({
 
         .site-menu-link:hover {
           transform: translateY(-1px);
-          background: rgba(255, 255, 255, 0.07);
-          border-color: rgba(34, 211, 238, 0.26);
-          box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
         }
 
         .site-menu-link--active {
@@ -633,26 +744,25 @@ export default function AppHeader({
           font-size: 13px;
         }
 
-        @media (max-width: 720px) {
-          .site-header {
-            gap: 12px;
-          }
+        .site-menu-link__badge {
+          display: inline-flex;
+          width: fit-content;
+          padding: 5px 9px;
+          border-radius: 999px;
+          background: rgba(255, 255, 255, 0.08);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          font-size: 11px;
+          font-weight: 800;
+          color: rgba(255, 255, 255, 0.86);
+        }
 
+        @media (max-width: 720px) {
           .site-logo__image {
             width: 132px;
           }
 
-          .site-header__left {
-            gap: 10px;
-          }
-
-          .site-header__right {
-            gap: 8px;
-          }
-
           .site-menu-panel {
             width: min(100vw - 16px, 360px);
-            right: 0;
           }
         }
 
@@ -661,12 +771,15 @@ export default function AppHeader({
             width: 118px;
           }
 
-          .site-menu-button {
+          .site-menu-button,
+          .site-home-button {
             min-height: 42px;
-            padding: 0 11px;
+            padding: 0 12px;
             font-size: 14px;
-            gap: 8px;
-            border-radius: 13px;
+          }
+
+          .site-account-actions {
+            grid-template-columns: 1fr;
           }
         }
       `}</style>

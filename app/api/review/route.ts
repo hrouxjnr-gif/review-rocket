@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { supabase } from "@/lib/supabase";
+import { supabaseAdmin } from "@/lib/supabase-server";
 import { getWorkspaceId } from "@/lib/workspace";
 
 function buildReviewMessage(params: {
@@ -57,53 +57,30 @@ function normalizeDatetime(value: string) {
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
-    }
-
-    const workspaceId = await getWorkspaceId(userId);
     const body = await req.json();
 
     const customerName = String(
-      body.customer_name ??
-        body.customerName ??
-        body.name ??
-        ""
+      body.customer_name ?? body.customerName ?? body.name ?? ""
     ).trim();
 
     const customerPhone = String(
-      body.phone ??
-        body.customerPhone ??
-        ""
+      body.phone ?? body.customerPhone ?? ""
     ).trim();
 
     const customerAddress = String(
-      body.address ??
-        body.customerAddress ??
-        ""
+      body.address ?? body.customerAddress ?? ""
     ).trim();
 
     const jobNotes = String(
-      body.notes ??
-        body.jobNotes ??
-        body.input_text ??
-        ""
+      body.notes ?? body.jobNotes ?? body.input_text ?? ""
     ).trim();
 
     const repairCostRaw = String(
-      body.cost ??
-        body.repairCost ??
-        ""
+      body.cost ?? body.repairCost ?? ""
     ).trim();
 
     const style = String(
-      body.style ??
-        body.messageStyle ??
-        "professional"
+      body.style ?? body.messageStyle ?? "professional"
     ).trim();
 
     const rawJobDatetime = String(
@@ -117,26 +94,39 @@ export async function POST(req: Request) {
     const jobDatetime = normalizeDatetime(rawJobDatetime);
 
     if (!jobNotes) {
-      return NextResponse.json(
-        { error: "No text provided" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "No text provided" }, { status: 400 });
     }
 
     const repairCostNumber = repairCostRaw ? Number(repairCostRaw) : 0;
 
-    const { data: settingsData } = await supabase
+    if (!userId) {
+      const outputText = buildReviewMessage({
+        customerName,
+        jobNotes,
+        repairCost: repairCostRaw || "",
+        businessName: "Roux Review Rocket",
+        reviewLink: "",
+        style,
+      });
+
+      return NextResponse.json({
+        success: true,
+        output_text: outputText,
+        demo_mode: true,
+      });
+    }
+
+    const workspaceId = await getWorkspaceId(userId);
+
+    const { data: settingsData } = await supabaseAdmin
       .from("settings")
       .select("business_name,currency,review_link")
       .eq("user_id", workspaceId || userId)
       .maybeSingle();
 
-    const businessName =
-      settingsData?.business_name || "Roux Review Rocket";
-    const currency =
-      settingsData?.currency || "";
-    const reviewLink =
-      settingsData?.review_link || "";
+    const businessName = settingsData?.business_name || "Roux Review Rocket";
+    const currency = settingsData?.currency || "";
+    const reviewLink = settingsData?.review_link || "";
 
     const formattedCost =
       repairCostRaw && !Number.isNaN(repairCostNumber)
@@ -152,7 +142,7 @@ export async function POST(req: Request) {
       style,
     });
 
-    const reviewInsert = await supabase.from("reviews").insert({
+    const reviewInsert = await supabaseAdmin.from("reviews").insert({
       user_id: userId,
       workspace_id: workspaceId,
       input_text: jobNotes,
@@ -170,7 +160,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const jobInsert = await supabase.from("jobs").insert({
+    const jobInsert = await supabaseAdmin.from("jobs").insert({
       user_id: userId,
       workspace_id: workspaceId,
       customer_name: customerName,
@@ -196,12 +186,10 @@ export async function POST(req: Request) {
     return NextResponse.json({
       success: true,
       output_text: outputText,
+      demo_mode: false,
     });
   } catch (error) {
     console.error("POST /api/review error:", error);
-    return NextResponse.json(
-      { error: "Server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

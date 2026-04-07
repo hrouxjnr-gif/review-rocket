@@ -20,6 +20,8 @@ type TeamMember = {
 
 type TeamData = {
   ownerUserId: string;
+  currentUserId: string;
+  isOwner: boolean;
   plan: string;
   maxUsers: number;
   seatsUsed: number;
@@ -37,6 +39,7 @@ export default function TeamPage() {
   const [copyText, setCopyText] = useState("Copy My User ID");
   const [inviteLoading, setInviteLoading] = useState(false);
   const [removingUserId, setRemovingUserId] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
 
   const myUserId = user?.id || "";
 
@@ -52,11 +55,21 @@ export default function TeamPage() {
     typeof teamData?.seatsUsed === "number" ? teamData.seatsUsed : 1;
 
   const seatsLeft = maxUsers >= 9999 ? "Unlimited" : Math.max(maxUsers - seatsUsed, 0);
+  const isWorkspaceOwner = Boolean(teamData?.isOwner);
 
   const usagePercent = useMemo(() => {
     if (!maxUsers || maxUsers >= 9999) return 0;
     return Math.min((seatsUsed / maxUsers) * 100, 100);
   }, [seatsUsed, maxUsers]);
+
+  const filteredMembers = useMemo(() => {
+    const members = teamData?.members || [];
+    const q = memberSearch.trim().toLowerCase();
+    if (!q) return members;
+    return members.filter((m) =>
+      `${m.member_user_id} ${m.role}`.toLowerCase().includes(q)
+    );
+  }, [teamData, memberSearch]);
 
   const loadSubscription = async () => {
     try {
@@ -217,6 +230,12 @@ export default function TeamPage() {
                   owner then adds them to the shared workspace from this page.
                 </p>
 
+                {!loading && teamData && !isWorkspaceOwner && (
+                  <p style={{ marginTop: 16, fontWeight: 700 }}>
+                    You are viewing this workspace as a team member. Only the owner can add or remove seats.
+                  </p>
+                )}
+
                 {message && (
                   <p style={{ marginTop: 16, fontWeight: 700 }}>{message}</p>
                 )}
@@ -237,6 +256,9 @@ export default function TeamPage() {
                   </div>
                   <div className="muted-text info-line">
                     • Monthly messages: <strong>{subscription?.monthly_limit ?? 0}</strong>
+                  </div>
+                  <div className="muted-text info-line">
+                    • Workspace owner: <strong>{teamData?.ownerUserId || myUserId}</strong>
                   </div>
                 </div>
               </div>
@@ -399,13 +421,20 @@ export default function TeamPage() {
                     placeholder="Paste team member user ID"
                     value={memberId}
                     onChange={(e) => setMemberId(e.target.value)}
+                    disabled={!isWorkspaceOwner}
                   />
 
                   <div className="button-row">
-                    <button onClick={invite} className="btn" disabled={inviteLoading}>
+                    <button onClick={invite} className="btn" disabled={inviteLoading || !isWorkspaceOwner}>
                       {inviteLoading ? "Adding..." : "Add User"}
                     </button>
                   </div>
+
+                  {!isWorkspaceOwner && (
+                    <p className="muted-text">
+                      Ask the workspace owner to add team members. You can still copy your own user ID above and send it to them.
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
@@ -441,6 +470,13 @@ export default function TeamPage() {
                 </div>
               ) : (
                 <div style={{ display: "grid" }}>
+                  <div style={{ padding: "18px 22px", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
+                    <input
+                      placeholder="Search by user ID or role (owner/member)"
+                      value={memberSearch}
+                      onChange={(e) => setMemberSearch(e.target.value)}
+                    />
+                  </div>
                   <div
                     style={{
                       display: "grid",
@@ -459,7 +495,12 @@ export default function TeamPage() {
                     <div>Action</div>
                   </div>
 
-                  {teamData.members.map((member) => (
+                  {filteredMembers.length === 0 ? (
+                    <div style={{ padding: 22 }} className="muted-text">
+                      No matches.
+                    </div>
+                  ) : (
+                    filteredMembers.map((member) => (
                     <div
                       key={member.id}
                       style={{
@@ -488,13 +529,14 @@ export default function TeamPage() {
                         <button
                           className="btn-outline"
                           onClick={() => removeMember(member.member_user_id)}
-                          disabled={removingUserId === member.member_user_id}
+                          disabled={removingUserId === member.member_user_id || !isWorkspaceOwner}
                         >
-                          {removingUserId === member.member_user_id ? "Removing..." : "Remove"}
+                          {!isWorkspaceOwner ? "Owner only" : removingUserId === member.member_user_id ? "Removing..." : "Remove"}
                         </button>
                       </div>
                     </div>
-                  ))}
+                    ))
+                  )}
                 </div>
               )}
             </div>
