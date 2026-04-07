@@ -1,7 +1,7 @@
 "use client";
 
 import AppHeader from "@/components/AppHeader";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { SignInButton, useAuth, useUser } from "@clerk/nextjs";
 
@@ -11,7 +11,46 @@ type SubscriptionData = {
   monthly_limit: number;
 };
 
-export default function PricingPage() {
+function PricingPageSkeleton() {
+  return (
+    <main className="page-shell">
+      <div className="page-container">
+        <AppHeader />
+
+        <div style={{ marginTop: 40 }}>
+          <section className="card" style={{ marginBottom: 0 }}>
+            <span className="badge">Pricing</span>
+            <h1
+              style={{
+                fontSize: "46px",
+                lineHeight: "1.06",
+                fontWeight: 800,
+                marginBottom: 14,
+                maxWidth: 760,
+              }}
+            >
+              Loading pricing...
+            </h1>
+
+            <p
+              className="muted-text"
+              style={{
+                maxWidth: 760,
+                fontSize: 18,
+                lineHeight: 1.8,
+                marginBottom: 18,
+              }}
+            >
+              Please wait while the pricing page loads.
+            </p>
+          </section>
+        </div>
+      </div>
+    </main>
+  );
+}
+
+function PricingPageContent() {
   const { user } = useUser();
   const { isLoaded, isSignedIn } = useAuth();
   const searchParams = useSearchParams();
@@ -58,8 +97,6 @@ export default function PricingPage() {
     loadSubscription();
   }, [isLoaded, isSignedIn]);
 
-  // If a signed-out user clicked "Sign in to buy", we bring them back with ?buy=pro|agency.
-  // Once they're signed in, we immediately kick off the PayFast redirect.
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) return;
@@ -70,12 +107,10 @@ export default function PricingPage() {
     setMessage("");
     setLoadingPlan(pendingBuyPlan);
 
-    // Redirect to a server route that returns an auto-submitting PayFast form.
     window.location.href = `/api/payfast?plan=${pendingBuyPlan}`;
   }, [isLoaded, isSignedIn, pendingBuyPlan, autoStarted]);
 
   const changePlan = async (plan: "free" | "pro" | "agency") => {
-    // In production we do NOT manually flip plans. Plans are activated by PayFast ITN.
     if (!showTestSwitches) {
       if (plan === "free") {
         window.location.href = "/dashboard";
@@ -130,8 +165,6 @@ export default function PricingPage() {
     setMessage("");
     setLoadingPlan(plan);
 
-    // This is a top-level navigation to a server route that returns an auto-submitting PayFast form.
-    // It's more reliable than async fetch + form.submit (some browsers drop user-activation after await).
     window.location.href = `/api/payfast?plan=${plan}`;
   };
 
@@ -211,9 +244,7 @@ export default function PricingPage() {
                   alignContent: "start",
                 }}
               >
-                <p style={{ fontWeight: 800, fontSize: 20 }}>
-                  Current plan
-                </p>
+                <p style={{ fontWeight: 800, fontSize: 20 }}>Current plan</p>
 
                 <div
                   style={{
@@ -457,7 +488,10 @@ export default function PricingPage() {
             </div>
           </section>
 
-          <section className="card" style={{ marginBottom: 0, padding: 0, overflow: "hidden" }}>
+          <section
+            className="card"
+            style={{ marginBottom: 0, padding: 0, overflow: "hidden" }}
+          >
             <div
               style={{
                 padding: "18px 22px",
@@ -540,7 +574,10 @@ export default function PricingPage() {
             <div className="card" style={{ marginBottom: 0 }}>
               <h2 className="section-title">Simple next step</h2>
 
-              <p className="muted-text" style={{ marginBottom: 16, lineHeight: 1.8 }}>
+              <p
+                className="muted-text"
+                style={{ marginBottom: 16, lineHeight: 1.8 }}
+              >
                 Test the workflow free on the dashboard first. Sign in when you want to
                 save data or pay for Pro or Agency.
               </p>
@@ -577,5 +614,13 @@ export default function PricingPage() {
         }
       `}</style>
     </main>
+  );
+}
+
+export default function PricingPage() {
+  return (
+    <Suspense fallback={<PricingPageSkeleton />}>
+      <PricingPageContent />
+    </Suspense>
   );
 }
