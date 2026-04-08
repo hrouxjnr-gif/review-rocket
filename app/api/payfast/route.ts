@@ -134,14 +134,14 @@ function addMonthsPreservingDay(date: Date, months: number) {
 function getPlanDetails(plan: PayFastPlan) {
   if (plan === "agency") {
     return {
-      amountZar: "1199.00",
+      amountZar: "1158.00",
       itemName: "Agency Plan",
       itemDescription: "Roux Review Rocket Agency monthly subscription",
     };
   }
 
   return {
-    amountZar: "349.00",
+    amountZar: "335.82",
     itemName: "Pro Plan",
     itemDescription: "Roux Review Rocket Pro monthly subscription",
   };
