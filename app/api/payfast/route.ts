@@ -266,11 +266,7 @@ async function buildPayFastCheckout(
     name_last: lastName,
     email_address: email,
     m_payment_id: paymentRef,
-
-    // KEEP THIS IN ZAR
     amount: amountZar,
-    recurring_amount: amountZar,
-
     item_name: itemName,
     item_description: itemDescription,
     custom_str1: userId,
@@ -278,9 +274,10 @@ async function buildPayFastCheckout(
     custom_str3: plan,
     payment_method: "cc",
 
-    // Subscription fields
+    // Monthly subscription in fixed ZAR
     subscription_type: "1",
     billing_date: nextBillingDate,
+    recurring_amount: amountZar,
     frequency: "3",
     cycles: "0",
   };
@@ -318,10 +315,13 @@ function buildAutoSubmitHtml(
     <title>Redirecting to PayFast</title>
   </head>
   <body style="font-family: system-ui, sans-serif; background: #0b1220; color: #f8fafc; display: grid; place-items: center; min-height: 100vh; margin: 0; padding: 24px;">
-    <div style="max-width: 520px; width: 100%; background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35);">
+    <div style="max-width: 560px; width: 100%; background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35);">
       <h1 style="margin: 0 0 12px; font-size: 28px;">Redirecting to PayFast</h1>
-      <p style="margin: 0 0 18px; line-height: 1.7; color: #cbd5e1;">
+      <p style="margin: 0 0 10px; line-height: 1.7; color: #cbd5e1;">
         Please wait while we securely open PayFast and start your monthly subscription.
+      </p>
+      <p style="margin: 0 0 18px; line-height: 1.7; color: #93c5fd; font-weight: 700;">
+        This is a monthly subscription and will renew automatically until cancelled.
       </p>
 
       <form id="payfast-form" method="POST" action="${escapeHtml(actionUrl)}">

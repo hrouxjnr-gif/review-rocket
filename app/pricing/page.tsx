@@ -16,7 +16,6 @@ function PricingPageSkeleton() {
     <main className="page-shell">
       <div className="page-container">
         <AppHeader />
-
         <div style={{ marginTop: 40 }}>
           <section className="card" style={{ marginBottom: 0 }}>
             <span className="badge">Pricing</span>
@@ -31,7 +30,6 @@ function PricingPageSkeleton() {
             >
               Loading pricing...
             </h1>
-
             <p
               className="muted-text"
               style={{
@@ -106,7 +104,6 @@ function PricingPageContent() {
     setAutoStarted(true);
     setMessage("");
     setLoadingPlan(pendingBuyPlan);
-
     window.location.href = `/api/payfast?plan=${pendingBuyPlan}`;
   }, [isLoaded, isSignedIn, pendingBuyPlan, autoStarted]);
 
@@ -118,7 +115,7 @@ function PricingPageContent() {
       }
 
       setMessage(
-        "Paid plans activate after a successful PayFast payment. Use the Pay with PayFast button."
+        "Paid plans activate after a successful PayFast payment. Use the monthly PayFast subscription button."
       );
       return;
     }
@@ -158,13 +155,12 @@ function PricingPageContent() {
 
   const startPayment = (plan: "pro" | "agency") => {
     if (!isSignedIn) {
-      setMessage("Sign in first if you want to buy Pro or Agency.");
+      setMessage("Sign in first if you want to subscribe.");
       return;
     }
 
     setMessage("");
     setLoadingPlan(plan);
-
     window.location.href = `/api/payfast?plan=${plan}`;
   };
 
@@ -196,7 +192,7 @@ function PricingPageContent() {
                     maxWidth: 760,
                   }}
                 >
-                  Simple pricing for service businesses that want more reviews.
+                  Simple monthly pricing for service businesses that want more reviews.
                 </h1>
 
                 <p
@@ -209,7 +205,7 @@ function PricingPageContent() {
                   }}
                 >
                   Use the free demo without signing in. Sign in only when you want
-                  to save your data or pay for Pro or Agency.
+                  to save your data or start a monthly subscription with Pro or Agency.
                 </p>
 
                 <div className="button-row">
@@ -225,7 +221,7 @@ function PricingPageContent() {
                 {!isSignedIn && (
                   <div className="button-row" style={{ marginTop: 14 }}>
                     <SignInButton mode="modal" fallbackRedirectUrl="/pricing">
-                      <button className="btn-outline">Sign in to upgrade</button>
+                      <button className="btn-outline">Sign in to subscribe</button>
                     </SignInButton>
                   </div>
                 )}
@@ -274,7 +270,7 @@ function PricingPageContent() {
                     • Free demo works without login
                   </div>
                   <div className="muted-text info-line">
-                    • Sign in is required for paid upgrades
+                    • Paid plans are monthly subscriptions
                   </div>
                   <div className="muted-text info-line">
                     • Pro is best for one operator
@@ -283,7 +279,7 @@ function PricingPageContent() {
                     • Agency is best for teams
                   </div>
                   <div className="muted-text info-line">
-                    • PayFast checkout is charged in ZAR
+                    • Checkout is billed in ZAR through PayFast
                   </div>
                 </div>
               </div>
@@ -307,7 +303,7 @@ function PricingPageContent() {
               <h3 className="section-title">Free</h3>
               <p className="price-value">AUD 0</p>
               <p className="muted-text" style={{ marginBottom: 14 }}>
-                Best for testing and first setup
+                Free demo access
               </p>
 
               <ul className="price-list">
@@ -336,9 +332,9 @@ function PricingPageContent() {
               </div>
 
               <h3 className="section-title">Pro</h3>
-              <p className="price-value">Approx. AUD 29</p>
+              <p className="price-value">AUD 29 / month</p>
               <p className="muted-text" style={{ marginBottom: 14 }}>
-                Charged as R 349 via PayFast
+                Monthly subscription. Charged in ZAR at checkout through PayFast.
               </p>
 
               <ul className="price-list">
@@ -347,7 +343,7 @@ function PricingPageContent() {
                 <li>All dashboard tools</li>
                 <li>Calendar and customer tracking</li>
                 <li>CSV export</li>
-                <li>Priority updates</li>
+                <li>Renews monthly until cancelled</li>
               </ul>
 
               <div className="button-row" style={{ marginTop: 18 }}>
@@ -357,7 +353,9 @@ function PricingPageContent() {
                     onClick={() => startPayment("pro")}
                     disabled={loadingPlan !== ""}
                   >
-                    {loadingPlan === "pro" ? "Loading..." : "Pay with PayFast"}
+                    {loadingPlan === "pro"
+                      ? "Loading..."
+                      : "Start Monthly Subscription"}
                   </button>
                 ) : (
                   <SignInButton
@@ -368,7 +366,7 @@ function PricingPageContent() {
                     signUpFallbackRedirectUrl="/pricing"
                   >
                     <button className="btn" disabled={loadingPlan !== ""}>
-                      Sign in to buy
+                      Sign in to subscribe
                     </button>
                   </SignInButton>
                 )}
@@ -391,9 +389,9 @@ function PricingPageContent() {
               </div>
 
               <h3 className="section-title">Agency</h3>
-              <p className="price-value">Approx. AUD 100</p>
+              <p className="price-value">AUD 100 / month</p>
               <p className="muted-text" style={{ marginBottom: 14 }}>
-                Charged as R 1199 via PayFast
+                Monthly subscription. Charged in ZAR at checkout through PayFast.
               </p>
 
               <ul className="price-list">
@@ -402,7 +400,7 @@ function PricingPageContent() {
                 <li>Shared team workspace</li>
                 <li>Team management page</li>
                 <li>Best for multi-staff businesses</li>
-                <li>Owner + staff workflow</li>
+                <li>Renews monthly until cancelled</li>
               </ul>
 
               <div className="button-row" style={{ marginTop: 18 }}>
@@ -412,7 +410,9 @@ function PricingPageContent() {
                     onClick={() => startPayment("agency")}
                     disabled={loadingPlan !== ""}
                   >
-                    {loadingPlan === "agency" ? "Loading..." : "Pay with PayFast"}
+                    {loadingPlan === "agency"
+                      ? "Loading..."
+                      : "Start Monthly Subscription"}
                   </button>
                 ) : (
                   <SignInButton
@@ -423,7 +423,7 @@ function PricingPageContent() {
                     signUpFallbackRedirectUrl="/pricing"
                   >
                     <button className="btn" disabled={loadingPlan !== ""}>
-                      Sign in to buy
+                      Sign in to subscribe
                     </button>
                   </SignInButton>
                 )}
@@ -472,17 +472,23 @@ function PricingPageContent() {
             </div>
 
             <div className="card" style={{ marginBottom: 0 }}>
-              <h2 className="section-title">Who each plan is for</h2>
+              <h2 className="section-title">How billing works</h2>
 
               <div className="info-list">
                 <div className="muted-text info-line">
-                  • <strong>Free</strong> — testing the app and basic setup
+                  • Pro and Agency are monthly subscriptions
                 </div>
                 <div className="muted-text info-line">
-                  • <strong>Pro</strong> — solo plumbers, electricians, HVAC, and similar service owners
+                  • Billing renews automatically each month until cancelled
                 </div>
                 <div className="muted-text info-line">
-                  • <strong>Agency</strong> — businesses with office staff, field staff, or multiple workers using the same system
+                  • Website pricing is shown in AUD for easier understanding
+                </div>
+                <div className="muted-text info-line">
+                  • PayFast processes the charge in ZAR at checkout
+                </div>
+                <div className="muted-text info-line">
+                  • The final checkout amount is shown before payment
                 </div>
               </div>
             </div>
@@ -516,6 +522,7 @@ function PricingPageContent() {
                 ["CSV export", "No", "Yes", "Yes"],
                 ["Shared workspace", "No", "No", "Yes"],
                 ["Team management", "No", "No", "Yes"],
+                ["Monthly billing", "No", "Yes", "Yes"],
               ].map(([label, free, pro, agency], index) => (
                 <div
                   key={label}
@@ -525,7 +532,7 @@ function PricingPageContent() {
                     gap: 12,
                     padding: "14px 22px",
                     borderBottom:
-                      index === 7 ? "none" : "1px solid rgba(255,255,255,0.06)",
+                      index === 8 ? "none" : "1px solid rgba(255,255,255,0.06)",
                     alignItems: "center",
                   }}
                   className="pricing-compare-row"
@@ -552,21 +559,21 @@ function PricingPageContent() {
 
               <div className="info-list">
                 <div className="muted-text info-line">
-                  <strong>Why does the page show AUD but checkout uses ZAR?</strong>
+                  <strong>Is this monthly?</strong>
                   <br />
-                  Pricing is shown in approximate AUD for Australian customers, but PayFast charges in ZAR.
+                  Yes. Pro and Agency are monthly subscriptions that renew automatically until cancelled.
+                </div>
+
+                <div className="muted-text info-line">
+                  <strong>Why do I see AUD on the site but ZAR at checkout?</strong>
+                  <br />
+                  Pricing is shown in AUD for easier reading, but PayFast processes the payment in ZAR.
                 </div>
 
                 <div className="muted-text info-line">
                   <strong>Can I test the app before paying?</strong>
                   <br />
                   Yes. The Free demo is there so you can test the workflow first without signing in.
-                </div>
-
-                <div className="muted-text info-line">
-                  <strong>Who needs Agency?</strong>
-                  <br />
-                  Businesses with multiple staff or shared team usage.
                 </div>
               </div>
             </div>
@@ -578,8 +585,8 @@ function PricingPageContent() {
                 className="muted-text"
                 style={{ marginBottom: 16, lineHeight: 1.8 }}
               >
-                Test the workflow free on the dashboard first. Sign in when you want to
-                save data or pay for Pro or Agency.
+                Test the workflow free on the dashboard first. When you are ready,
+                sign in and start a monthly subscription for Pro or Agency.
               </p>
 
               <div className="button-row">
