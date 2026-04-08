@@ -5,11 +5,13 @@ import { getWorkspaceId } from "@/lib/workspace";
 import crypto from "crypto";
 
 type PayFastPlan = "pro" | "agency";
+type OrderedField = [string, string];
 
 type CheckoutBuildResult =
   | {
       ok: true;
       actionUrl: string;
+      orderedFields: OrderedField[];
       fields: Record<string, string>;
     }
   | {
@@ -18,10 +20,34 @@ type CheckoutBuildResult =
       error: string;
     };
 
-type CheckoutOverrides = {
-  email?: string;
-  name?: string;
-};
+const PAYFAST_FIELD_ORDER = [
+  "merchant_id",
+  "merchant_key",
+  "return_url",
+  "cancel_url",
+  "notify_url",
+  "name_first",
+  "name_last",
+  "email_address",
+  "cell_number",
+  "m_payment_id",
+  "amount",
+  "item_name",
+  "item_description",
+  "custom_int1",
+  "custom_int2",
+  "custom_int3",
+  "custom_int4",
+  "custom_int5",
+  "custom_str1",
+  "custom_str2",
+  "custom_str3",
+  "custom_str4",
+  "custom_str5",
+  "email_confirmation",
+  "confirmation_address",
+  "payment_method",
+] as const;
 
 function getPayFastActionUrl(sandbox: boolean) {
   return sandbox
@@ -33,55 +59,50 @@ function sanitizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, "");
 }
 
-function buildPayFastQueryString(
-  fields: Record<string, string>,
-  passphrase?: string
-) {
-  const params = new URLSearchParams();
+function encodePayFastValue(value: string) {
+  return encodeURIComponent(value.trim())
+    .replace(/%20/g, "+")
+    .replace(/[!'()*]/g, (char) =>
+      `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+    )
+    .replace(/%[0-9a-f]{2}/gi, (match) => match.toUpperCase());
+}
 
-  for (const [key, value] of Object.entries(fields)) {
-    const clean = String(value ?? "").trim();
+function toOrderedFields(rawFields: Record<string, string>): OrderedField[] {
+  const ordered: OrderedField[] = [];
 
-    if (clean !== "") {
-      params.append(key, clean);
+  for (const key of PAYFAST_FIELD_ORDER) {
+    const value = String(rawFields[key] ?? "").trim();
+
+    if (value !== "") {
+      ordered.push([key, value]);
     }
   }
 
+  return ordered;
+}
+
+function buildSignatureString(
+  orderedFields: OrderedField[],
+  passphrase?: string
+) {
+  const parts = orderedFields.map(
+    ([key, value]) => `${key}=${encodePayFastValue(value)}`
+  );
+
   if (passphrase && passphrase.trim() !== "") {
-    params.append("passphrase", passphrase.trim());
+    parts.push(`passphrase=${encodePayFastValue(passphrase.trim())}`);
   }
 
-  return params.toString();
+  return parts.join("&");
 }
 
 function createPayFastSignature(
-  fields: Record<string, string>,
+  orderedFields: OrderedField[],
   passphrase?: string
 ) {
-  const dataToSign = buildPayFastQueryString(fields, passphrase);
+  const dataToSign = buildSignatureString(orderedFields, passphrase);
   return crypto.createHash("md5").update(dataToSign).digest("hex");
-}
-
-function formatDateYYYYMMDD(date: Date) {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
-  const day = String(date.getUTCDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function addMonthsPreservingDay(date: Date, months: number) {
-  const year = date.getUTCFullYear();
-  const monthIndex = date.getUTCMonth() + months;
-  const dayOfMonth = date.getUTCDate();
-
-  const candidate = new Date(Date.UTC(year, monthIndex, 1));
-  const lastDayOfTargetMonth = new Date(
-    Date.UTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, 0)
-  ).getUTCDate();
-
-  candidate.setUTCDate(Math.min(dayOfMonth, lastDayOfTargetMonth));
-
-  return candidate;
 }
 
 function getPlanDetails(plan: PayFastPlan) {
@@ -89,12 +110,14 @@ function getPlanDetails(plan: PayFastPlan) {
     return {
       amount: "1199.00",
       itemName: "Agency Plan",
+      itemDescription: "Roux Review Rocket Agency once-off test payment",
     };
   }
 
   return {
     amount: "349.00",
     itemName: "Pro Plan",
+    itemDescription: "Roux Review Rocket Pro once-off test payment",
   };
 }
 
@@ -107,9 +130,15 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+function orderedFieldsToObject(
+  orderedFields: OrderedField[],
+  signature: string
+): Record<string, string> {
+  return Object.fromEntries([...orderedFields, ["signature", signature]]);
+}
+
 async function buildPayFastCheckout(
-  plan: PayFastPlan,
-  overrides?: CheckoutOverrides
+  plan: PayFastPlan
 ): Promise<CheckoutBuildResult> {
   const { userId } = await auth();
 
@@ -123,16 +152,21 @@ async function buildPayFastCheckout(
 
   const user = await currentUser();
 
-  const fallbackEmail =
+  const email =
     user?.emailAddresses?.find((entry) => entry.id === user.primaryEmailAddressId)
       ?.emailAddress ||
     user?.emailAddresses?.[0]?.emailAddress ||
     "";
 
-  const fallbackName = user?.fullName || user?.firstName || "Customer";
+  const firstName =
+    user?.firstName?.trim() ||
+    user?.fullName?.trim().split(" ")[0] ||
+    "Customer";
 
-  const email = String(overrides?.email || fallbackEmail).trim();
-  const displayName = String(overrides?.name || fallbackName).trim() || "Customer";
+  const lastName =
+    user?.lastName?.trim() ||
+    user?.fullName?.trim().split(" ").slice(1).join(" ") ||
+    "";
 
   if (!email) {
     return {
@@ -143,13 +177,13 @@ async function buildPayFastCheckout(
   }
 
   const workspaceId = await getWorkspaceId(userId);
-  const { amount, itemName } = getPlanDetails(plan);
+  const { amount, itemName, itemDescription } = getPlanDetails(plan);
 
-  const merchantId = process.env.PAYFAST_MERCHANT_ID;
-  const merchantKey = process.env.PAYFAST_MERCHANT_KEY;
-  const passphrase = process.env.PAYFAST_PASSPHRASE || "";
-  const baseUrlRaw = process.env.NEXT_PUBLIC_BASE_URL;
-  const sandbox = process.env.PAYFAST_SANDBOX === "true";
+  const merchantId = String(process.env.PAYFAST_MERCHANT_ID || "").trim();
+  const merchantKey = String(process.env.PAYFAST_MERCHANT_KEY || "").trim();
+  const passphrase = String(process.env.PAYFAST_PASSPHRASE || "").trim();
+  const baseUrlRaw = String(process.env.NEXT_PUBLIC_BASE_URL || "").trim();
+  const sandbox = String(process.env.PAYFAST_SANDBOX || "").trim() === "true";
 
   if (!merchantId || !merchantKey || !baseUrlRaw) {
     return {
@@ -169,20 +203,19 @@ async function buildPayFastCheckout(
 
   const baseUrl = sanitizeBaseUrl(baseUrlRaw);
   const paymentRef = crypto.randomUUID();
-  const nextBillingDate = formatDateYYYYMMDD(
-    addMonthsPreservingDay(new Date(), 1)
-  );
 
-  const { error: paymentInsertError } = await supabaseAdmin.from("payments").insert({
-    user_id: userId,
-    workspace_id: workspaceId,
-    plan,
-    provider: "payfast",
-    status: "pending",
-    amount: Number(amount),
-    payfast_payment_id: paymentRef,
-    email,
-  });
+  const { error: paymentInsertError } = await supabaseAdmin
+    .from("payments")
+    .insert({
+      user_id: userId,
+      workspace_id: workspaceId,
+      plan,
+      provider: "payfast",
+      status: "pending",
+      amount: Number(amount),
+      payfast_payment_id: paymentRef,
+      email,
+    });
 
   if (paymentInsertError) {
     return {
@@ -192,44 +225,42 @@ async function buildPayFastCheckout(
     };
   }
 
-  const fields: Record<string, string> = {
+  const rawFields: Record<string, string> = {
     merchant_id: merchantId,
     merchant_key: merchantKey,
     return_url: `${baseUrl}/payment-success`,
     cancel_url: `${baseUrl}/payment-cancel`,
     notify_url: `${baseUrl}/api/payfast/notify`,
-    name_first: displayName,
+    name_first: firstName,
+    name_last: lastName,
     email_address: email,
     m_payment_id: paymentRef,
     amount,
     item_name: itemName,
-    payment_method: "cc",
+    item_description: itemDescription,
     custom_str1: userId,
     custom_str2: workspaceId || "",
     custom_str3: plan,
-
-    // Real PayFast subscription fields
-    subscription_type: "1",
-    billing_date: nextBillingDate,
-    recurring_amount: amount,
-    frequency: "3",
-    cycles: "0",
+    payment_method: "cc",
   };
 
-  const signature = createPayFastSignature(fields, passphrase);
+  const orderedFields = toOrderedFields(rawFields);
+  const signature = createPayFastSignature(orderedFields, passphrase);
 
   return {
     ok: true,
     actionUrl: getPayFastActionUrl(sandbox),
-    fields: {
-      ...fields,
-      signature,
-    },
+    orderedFields,
+    fields: orderedFieldsToObject(orderedFields, signature),
   };
 }
 
-function buildAutoSubmitHtml(actionUrl: string, fields: Record<string, string>) {
-  const inputs = Object.entries(fields)
+function buildAutoSubmitHtml(
+  actionUrl: string,
+  orderedFields: OrderedField[],
+  signature: string
+) {
+  const inputs = [...orderedFields, ["signature", signature] as OrderedField]
     .map(
       ([key, value]) =>
         `<input type="hidden" name="${escapeHtml(key)}" value="${escapeHtml(
@@ -249,7 +280,7 @@ function buildAutoSubmitHtml(actionUrl: string, fields: Record<string, string>) 
     <div style="max-width: 520px; width: 100%; background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35);">
       <h1 style="margin: 0 0 12px; font-size: 28px;">Redirecting to PayFast</h1>
       <p style="margin: 0 0 18px; line-height: 1.7; color: #cbd5e1;">
-        Please wait while we securely open PayFast and set up your monthly subscription.
+        Please wait while we securely open PayFast for a one-time test payment.
       </p>
 
       <form id="payfast-form" method="POST" action="${escapeHtml(actionUrl)}">
@@ -304,27 +335,23 @@ export async function GET(req: Request) {
     );
   }
 
-  return new NextResponse(buildAutoSubmitHtml(result.actionUrl, result.fields), {
-    status: 200,
-    headers: {
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-store",
-    },
-  });
+  const signature = result.fields.signature;
+
+  return new NextResponse(
+    buildAutoSubmitHtml(result.actionUrl, result.orderedFields, signature),
+    {
+      status: 200,
+      headers: {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+      },
+    }
+  );
 }
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
-      return NextResponse.json(
-        { error: "Please sign in before upgrading." },
-        { status: 401 }
-      );
-    }
-
-    const body = await req.json();
+    const body = await req.json().catch(() => ({}));
     const planRaw = String(body.plan || "").toLowerCase();
     const plan =
       planRaw === "pro" || planRaw === "agency"
@@ -335,10 +362,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid plan." }, { status: 400 });
     }
 
-    const result = await buildPayFastCheckout(plan, {
-      email: String(body.email || ""),
-      name: String(body.name || ""),
-    });
+    const result = await buildPayFastCheckout(plan);
 
     if (!result.ok) {
       return NextResponse.json(
