@@ -47,6 +47,11 @@ const PAYFAST_FIELD_ORDER = [
   "email_confirmation",
   "confirmation_address",
   "payment_method",
+  "subscription_type",
+  "billing_date",
+  "recurring_amount",
+  "frequency",
+  "cycles",
 ] as const;
 
 function getPayFastActionUrl(sandbox: boolean) {
@@ -105,19 +110,40 @@ function createPayFastSignature(
   return crypto.createHash("md5").update(dataToSign).digest("hex");
 }
 
+function formatDateYYYYMMDD(date: Date) {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(date.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addMonthsPreservingDay(date: Date, months: number) {
+  const year = date.getUTCFullYear();
+  const monthIndex = date.getUTCMonth() + months;
+  const dayOfMonth = date.getUTCDate();
+
+  const candidate = new Date(Date.UTC(year, monthIndex, 1));
+  const lastDayOfTargetMonth = new Date(
+    Date.UTC(candidate.getUTCFullYear(), candidate.getUTCMonth() + 1, 0)
+  ).getUTCDate();
+
+  candidate.setUTCDate(Math.min(dayOfMonth, lastDayOfTargetMonth));
+  return candidate;
+}
+
 function getPlanDetails(plan: PayFastPlan) {
   if (plan === "agency") {
     return {
-      amount: "1199.00",
+      amountZar: "1199.00",
       itemName: "Agency Plan",
-      itemDescription: "Roux Review Rocket Agency once-off test payment",
+      itemDescription: "Roux Review Rocket Agency monthly subscription",
     };
   }
 
   return {
-    amount: "349.00",
+    amountZar: "349.00",
     itemName: "Pro Plan",
-    itemDescription: "Roux Review Rocket Pro once-off test payment",
+    itemDescription: "Roux Review Rocket Pro monthly subscription",
   };
 }
 
@@ -153,8 +179,10 @@ async function buildPayFastCheckout(
   const user = await currentUser();
 
   const email =
-    user?.emailAddresses?.find((entry) => entry.id === user.primaryEmailAddressId)
-      ?.emailAddress ||
+    user?.emailAddresses?.find(
+      (entry: { id: string; emailAddress: string }) =>
+        entry.id === user.primaryEmailAddressId
+    )?.emailAddress ||
     user?.emailAddresses?.[0]?.emailAddress ||
     "";
 
@@ -177,7 +205,7 @@ async function buildPayFastCheckout(
   }
 
   const workspaceId = await getWorkspaceId(userId);
-  const { amount, itemName, itemDescription } = getPlanDetails(plan);
+  const { amountZar, itemName, itemDescription } = getPlanDetails(plan);
 
   const merchantId = String(process.env.PAYFAST_MERCHANT_ID || "").trim();
   const merchantKey = String(process.env.PAYFAST_MERCHANT_KEY || "").trim();
@@ -203,6 +231,9 @@ async function buildPayFastCheckout(
 
   const baseUrl = sanitizeBaseUrl(baseUrlRaw);
   const paymentRef = crypto.randomUUID();
+  const nextBillingDate = formatDateYYYYMMDD(
+    addMonthsPreservingDay(new Date(), 1)
+  );
 
   const { error: paymentInsertError } = await supabaseAdmin
     .from("payments")
@@ -212,7 +243,7 @@ async function buildPayFastCheckout(
       plan,
       provider: "payfast",
       status: "pending",
-      amount: Number(amount),
+      amount: Number(amountZar),
       payfast_payment_id: paymentRef,
       email,
     });
@@ -235,13 +266,23 @@ async function buildPayFastCheckout(
     name_last: lastName,
     email_address: email,
     m_payment_id: paymentRef,
-    amount,
+
+    // KEEP THIS IN ZAR
+    amount: amountZar,
+    recurring_amount: amountZar,
+
     item_name: itemName,
     item_description: itemDescription,
     custom_str1: userId,
     custom_str2: workspaceId || "",
     custom_str3: plan,
     payment_method: "cc",
+
+    // Subscription fields
+    subscription_type: "1",
+    billing_date: nextBillingDate,
+    frequency: "3",
+    cycles: "0",
   };
 
   const orderedFields = toOrderedFields(rawFields);
@@ -280,7 +321,7 @@ function buildAutoSubmitHtml(
     <div style="max-width: 520px; width: 100%; background: #111827; border: 1px solid rgba(255,255,255,0.08); border-radius: 24px; padding: 24px; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.35);">
       <h1 style="margin: 0 0 12px; font-size: 28px;">Redirecting to PayFast</h1>
       <p style="margin: 0 0 18px; line-height: 1.7; color: #cbd5e1;">
-        Please wait while we securely open PayFast for a one-time test payment.
+        Please wait while we securely open PayFast and start your monthly subscription.
       </p>
 
       <form id="payfast-form" method="POST" action="${escapeHtml(actionUrl)}">
